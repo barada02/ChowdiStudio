@@ -18,6 +18,7 @@ export const RunwayStage: React.FC = () => {
     const [selectedScenarioId, setSelectedScenarioId] = useState<string>('studio');
     const [mode, setMode] = useState<'video' | 'image'>('video');
     const [error, setError] = useState<string | null>(null);
+    const [viewingAsset, setViewingAsset] = useState<RunwayAsset | null>(null);
 
     // Filter valid concepts (must have at least one image)
     const validConcepts = state.generatedConcepts.filter(c => c.images.front);
@@ -74,7 +75,7 @@ export const RunwayStage: React.FC = () => {
     }
 
     return (
-        <div className="h-full flex bg-ide-bg text-ide-text">
+        <div className="h-full flex bg-ide-bg text-ide-text relative">
             {/* Left Panel: Production Controls */}
             <div className="w-80 flex-shrink-0 bg-ide-panel border-r border-ide-border p-6 flex flex-col overflow-y-auto">
                 <div className="flex items-center gap-2 mb-6 text-ide-accent">
@@ -174,27 +175,43 @@ export const RunwayStage: React.FC = () => {
                     <Icons.Video size={16} /> Production Gallery
                 </h3>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6">
                     {state.runwayAssets.map(asset => (
-                        <div key={asset.id} className="group relative bg-ide-panel rounded-lg overflow-hidden border border-ide-border shadow-md hover:shadow-xl transition-all hover:-translate-y-1">
+                        <div 
+                            key={asset.id} 
+                            onClick={() => setViewingAsset(asset)}
+                            className="group relative bg-ide-panel rounded-lg overflow-hidden border border-ide-border shadow-md hover:shadow-xl transition-all hover:-translate-y-1 cursor-pointer"
+                        >
                             <div className="aspect-[9/16] bg-black relative">
                                 {asset.type === 'video' ? (
                                     <video 
                                         src={asset.url} 
-                                        controls 
-                                        className="w-full h-full object-cover"
-                                        poster={asset.thumbnailUrl} // Optional if we had one
+                                        className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity"
+                                        muted
+                                        playsInline
+                                        onMouseOver={e => e.currentTarget.play()}
+                                        onMouseOut={e => {
+                                            e.currentTarget.pause();
+                                            e.currentTarget.currentTime = 0;
+                                        }}
                                     />
                                 ) : (
                                     <img src={asset.url} alt="Photoshoot" className="w-full h-full object-cover" />
                                 )}
 
-                                <div className="absolute top-2 right-2 px-2 py-1 bg-black/60 rounded text-[10px] text-white uppercase font-bold backdrop-blur-sm">
+                                <div className="absolute top-2 right-2 px-2 py-1 bg-black/60 rounded text-[10px] text-white uppercase font-bold backdrop-blur-sm z-10">
                                     {asset.type}
+                                </div>
+                                
+                                {/* Overlay hint */}
+                                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20 z-0">
+                                     <div className="bg-black/50 text-white p-2 rounded-full backdrop-blur-sm">
+                                         <Icons.Zoom size={20} />
+                                     </div>
                                 </div>
                             </div>
                             <div className="p-3">
-                                <h4 className="text-sm font-bold text-ide-text">{asset.scenario}</h4>
+                                <h4 className="text-sm font-bold text-ide-text truncate">{asset.scenario}</h4>
                                 <p className="text-[10px] text-ide-muted mt-1">Generated via Gemini</p>
                             </div>
                         </div>
@@ -212,6 +229,36 @@ export const RunwayStage: React.FC = () => {
                     )}
                 </div>
             </div>
+
+            {/* Cinema Mode Lightbox */}
+            {viewingAsset && (
+                <div className="absolute inset-0 z-50 bg-black/95 flex items-center justify-center p-8 backdrop-blur-sm animate-in fade-in duration-200">
+                    <button 
+                        onClick={() => setViewingAsset(null)}
+                        className="absolute top-4 right-4 text-white/50 hover:text-white transition p-2 bg-white/10 rounded-full"
+                    >
+                        <Icons.X size={24} />
+                    </button>
+                    
+                    <div className="relative max-h-full max-w-full flex flex-col items-center justify-center h-full">
+                         {viewingAsset.type === 'video' ? (
+                            <video 
+                                src={viewingAsset.url} 
+                                controls 
+                                autoPlay 
+                                className="max-h-[85vh] w-auto rounded shadow-2xl border border-white/10 bg-black"
+                            />
+                        ) : (
+                            <img 
+                                src={viewingAsset.url} 
+                                alt="Full View" 
+                                className="max-h-[85vh] w-auto rounded shadow-2xl border border-white/10" 
+                            />
+                        )}
+                        <h3 className="text-white mt-4 font-light text-lg tracking-widest uppercase opacity-80">{viewingAsset.scenario}</h3>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
