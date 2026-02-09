@@ -27,6 +27,12 @@ const reducer = (state: AppState, action: Action): AppState => {
             return { ...state, currentTab: action.payload };
         case 'ADD_INSPIRATION':
             return { ...state, inspirationBoard: [...state.inspirationBoard, action.payload] };
+        case 'REMOVE_INSPIRATION':
+            return {
+                ...state,
+                inspirationBoard: state.inspirationBoard.filter(asset => asset.id !== action.payload),
+                selectedAssetIds: state.selectedAssetIds.filter(id => id !== action.payload)
+            };
         case 'TOGGLE_ASSET_SELECTION':
             return {
                 ...state,

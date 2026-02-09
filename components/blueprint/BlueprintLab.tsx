@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { jsPDF } from 'jspdf';
 import { useStudio } from '../../context/StudioContext';
 import { geminiService } from '../../services/geminiService';
 import { AppTab, ViewType, AgentStatus } from '../../types';
@@ -62,6 +63,140 @@ export const BlueprintLab: React.FC = () => {
         generateData();
     }, [finalConcept, state.agentStatus]);
 
+    // --- 3. Export PDF Function ---
+    const handleExportPdf = () => {
+        if (!finalConcept || !finalConcept.techPack) return;
+        const { techPack } = finalConcept;
+
+        const doc = new jsPDF();
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const margin = 15;
+        let yPos = 20;
+
+        // --- Header ---
+        doc.setFontSize(22);
+        doc.setFont("helvetica", "bold");
+        doc.text(finalConcept.name.toUpperCase(), margin, yPos);
+        
+        yPos += 10;
+        doc.setFontSize(10);
+        doc.setFont("courier", "normal");
+        doc.text(`STYLE: ${techPack.style_number} | SEASON: ${techPack.season}`, margin, yPos);
+        doc.text(`DATE: ${new Date().toLocaleDateString()}`, pageWidth - margin - 40, yPos);
+
+        yPos += 15;
+
+        // --- Visuals (Page 1) ---
+        const imgWidth = (pageWidth - (margin * 3)) / 2;
+        const imgHeight = imgWidth * 1.33; // 3:4 aspect ratio
+
+        try {
+            if (finalConcept.images.hero) {
+                doc.setFont("helvetica", "bold");
+                doc.text("REFERENCE LOOK", margin, yPos - 3);
+                doc.addImage(finalConcept.images.hero.url, 'PNG', margin, yPos, imgWidth, imgHeight);
+            }
+
+            if (finalConcept.images.technical) {
+                doc.text("TECHNICAL FLAT", margin + imgWidth + margin, yPos - 3);
+                doc.addImage(finalConcept.images.technical.url, 'PNG', margin + imgWidth + margin, yPos, imgWidth, imgHeight);
+            }
+        } catch (e) {
+            console.error("Image export error:", e);
+        }
+
+        yPos += imgHeight + 20;
+
+        // --- Measurements ---
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(14);
+        doc.text("CONSTRUCTION SPECIFICATIONS", margin, yPos);
+        yPos += 8;
+
+        doc.setDrawColor(200);
+        doc.setLineWidth(0.1);
+        doc.line(margin, yPos, pageWidth - margin, yPos); // Header line
+        yPos += 5;
+
+        doc.setFontSize(9);
+        doc.text("POINT OF MEASURE (POM)", margin, yPos);
+        doc.text(`VALUE (${techPack.measurements[0]?.unit})`, pageWidth - margin - 40, yPos, { align: 'right' });
+        doc.text("TOL +/-", pageWidth - margin, yPos, { align: 'right' });
+        yPos += 3;
+        doc.line(margin, yPos, pageWidth - margin, yPos); 
+        yPos += 6;
+
+        doc.setFont("helvetica", "normal");
+        techPack.measurements.forEach((m, i) => {
+            if (yPos > 280) {
+                doc.addPage();
+                yPos = 20;
+            }
+            
+            // Striping
+            if (i % 2 === 1) {
+                doc.setFillColor(245, 245, 245);
+                doc.rect(margin, yPos - 4, pageWidth - (margin * 2), 6, 'F');
+            }
+
+            doc.text(m.pom, margin + 2, yPos);
+            doc.text(m.value.toString(), pageWidth - margin - 40, yPos, { align: 'right' });
+            doc.text(m.tolerance.toString(), pageWidth - margin, yPos, { align: 'right' });
+            yPos += 6;
+        });
+
+        // --- BOM (New Page) ---
+        doc.addPage();
+        yPos = 20;
+
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(14);
+        doc.text("BILL OF MATERIALS (BOM)", margin, yPos);
+        yPos += 15;
+
+        techPack.bom.forEach((item) => {
+            if (yPos > 270) {
+                doc.addPage();
+                yPos = 20;
+            }
+
+            doc.setDrawColor(220);
+            doc.rect(margin, yPos, pageWidth - (margin * 2), 25);
+
+            doc.setFontSize(8);
+            doc.setTextColor(100);
+            doc.text(item.location.toUpperCase(), margin + 5, yPos + 8);
+            
+            doc.setFontSize(11);
+            doc.setTextColor(0);
+            doc.setFont("helvetica", "bold");
+            doc.text(item.item, margin + 5, yPos + 15);
+            
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(9);
+            doc.setTextColor(80);
+            doc.text(item.description, margin + 5, yPos + 21);
+
+            doc.setFont("courier", "bold");
+            doc.setTextColor(0);
+            doc.text(`QTY: ${item.quantity}`, pageWidth - margin - 50, yPos + 10);
+            doc.text(`EST: $${item.cost_estimate}`, pageWidth - margin - 50, yPos + 18);
+
+            yPos += 30;
+        });
+
+        // Total Cost
+        yPos += 5;
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(12);
+        doc.text("TOTAL ESTIMATED COST:", pageWidth - margin - 60, yPos);
+        doc.setTextColor(0, 150, 0); // Green
+        doc.text(`$${techPack.total_cost_estimate.toFixed(2)}`, pageWidth - margin, yPos, { align: 'right' });
+        doc.setTextColor(0);
+
+        doc.save(`${finalConcept.name.replace(/\s+/g, '_')}_TechPack.pdf`);
+    };
+
 
     if (!finalConcept) {
         return (
@@ -101,7 +236,10 @@ export const BlueprintLab: React.FC = () => {
                         </div>
                     </div>
                 </div>
-                <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-xs font-bold flex items-center gap-2 transition shadow-md">
+                <button 
+                    onClick={handleExportPdf}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-xs font-bold flex items-center gap-2 transition shadow-md"
+                >
                     <Icons.Download size={14} /> Export Tech Pack (PDF)
                 </button>
             </div>

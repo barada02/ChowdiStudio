@@ -19,7 +19,12 @@ import {
     X,
     Clapperboard,
     Film,
-    Camera
+    Camera,
+    Trash2,
+    ChevronRight,
+    ChevronLeft,
+    PanelRightClose,
+    PanelRightOpen
 } from 'lucide-react';
 
 export const Icons = {
@@ -46,5 +51,10 @@ export const Icons = {
     X: X,
     Runway: Clapperboard,
     Video: Film,
-    Camera: Camera
+    Camera: Camera,
+    Trash: Trash2,
+    ChevronRight: ChevronRight,
+    ChevronLeft: ChevronLeft,
+    PanelClose: PanelRightClose,
+    PanelOpen: PanelRightOpen
 };

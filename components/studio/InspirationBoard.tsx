@@ -38,6 +38,11 @@ export const InspirationBoard: React.FC = () => {
         dispatch({ type: 'TOGGLE_ASSET_SELECTION', payload: id });
     };
 
+    const deleteAsset = (e: React.MouseEvent, id: string) => {
+        e.stopPropagation();
+        dispatch({ type: 'REMOVE_INSPIRATION', payload: id });
+    };
+
     return (
         <div className="h-full flex flex-col bg-ide-panel">
             {/* Header */}
@@ -93,6 +98,15 @@ export const InspirationBoard: React.FC = () => {
                                     {isSelected && <Icons.Check size={10} className="text-white" />}
                                 </div>
 
+                                {/* Delete Button */}
+                                <button
+                                    onClick={(e) => deleteAsset(e, asset.id)}
+                                    className="absolute top-2 left-2 z-30 p-1 bg-black/40 hover:bg-red-500 text-white rounded opacity-0 group-hover:opacity-100 transition-all backdrop-blur-sm"
+                                    title="Delete Asset"
+                                >
+                                    <Icons.Trash size={10} />
+                                </button>
+
                                 {/* Media Content */}
                                 {asset.type === 'image' && (
                                     <img 
@@ -107,7 +121,7 @@ export const InspirationBoard: React.FC = () => {
                                         src={asset.content} 
                                         className="w-full h-auto block bg-black" 
                                         controls={false} 
-                                        autoPlay={false} // Don't autoplay to save resources, preview on hover?
+                                        autoPlay={false} 
                                         muted 
                                         loop 
                                         playsInline 
@@ -123,7 +137,7 @@ export const InspirationBoard: React.FC = () => {
                                 )}
 
                                 {/* Hover Overlay */}
-                                <div className="absolute inset-0 bg-ide-bg/90 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center p-2 backdrop-blur-sm">
+                                <div className="absolute inset-0 bg-ide-bg/90 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center p-2 backdrop-blur-sm pointer-events-none">
                                     <span className="text-[10px] text-ide-text font-mono text-center break-all line-clamp-3 leading-tight">
                                         {asset.name}
                                     </span>

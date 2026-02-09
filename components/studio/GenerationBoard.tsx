@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useStudio } from '../../context/StudioContext';
 import { ViewType } from '../../types';
 import { Icons } from '../ui/Icons';
 
 export const GenerationBoard: React.FC = () => {
     const { state, dispatch } = useStudio();
+    const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
     const handleSelect = (id: string | null) => {
         // If clicking existing active, or explicitly setting null
@@ -21,6 +22,15 @@ export const GenerationBoard: React.FC = () => {
     const handleBackToGrid = (e: React.MouseEvent) => {
         e.stopPropagation();
         dispatch({ type: 'SELECT_CONCEPT', payload: '' }); 
+    };
+
+    const downloadImage = (url: string, name: string) => {
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = name;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     };
 
     // Find the active concept
@@ -63,28 +73,47 @@ export const GenerationBoard: React.FC = () => {
                             <p className="text-[10px] text-ide-muted font-mono">{activeConcept.id}</p>
                         </div>
                     </div>
-                    <button 
-                        onClick={() => dispatch({ type: 'FINALIZE_CONCEPT', payload: activeConcept.id })}
-                        className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded flex items-center gap-2 shadow-lg hover:shadow-xl transition transform hover:-translate-y-0.5"
-                    >
-                        <Icons.Check size={14} /> FINALIZE DESIGN
-                    </button>
+                    <div className="flex items-center gap-3">
+                        <button 
+                            onClick={() => dispatch({ type: 'FINALIZE_CONCEPT', payload: activeConcept.id })}
+                            className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded flex items-center gap-2 shadow-lg hover:shadow-xl transition transform hover:-translate-y-0.5"
+                        >
+                            <Icons.Check size={14} /> FINALIZE DESIGN
+                        </button>
+                        <button
+                            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                            className="p-2 hover:bg-ide-bg rounded text-ide-muted hover:text-ide-text transition border border-transparent hover:border-ide-border"
+                            title={isSidebarOpen ? "Collapse Info" : "Expand Info"}
+                        >
+                            {isSidebarOpen ? <Icons.PanelClose size={18} /> : <Icons.PanelOpen size={18} />}
+                        </button>
+                    </div>
                 </div>
 
                 {/* Detail Body */}
                 <div className="flex-1 flex overflow-hidden">
                     {/* Visuals (Takes max space) */}
-                    <div className="flex-1 p-6 overflow-y-auto flex items-center justify-center gap-8 bg-ide-bg">
+                    <div className="flex-1 p-6 overflow-y-auto flex items-center justify-center gap-8 bg-ide-bg transition-all duration-300">
                         
                         {/* 1. Hero View (Realistic) - Editable */}
-                        <div className="relative group h-full max-h-[85vh] aspect-[3/4] bg-ide-panel rounded-lg shadow-2xl border border-ide-border overflow-hidden">
-                             <div className="absolute top-0 left-0 right-0 p-3 bg-gradient-to-b from-black/50 to-transparent z-10">
+                        <div className={`relative group h-full max-h-[85vh] aspect-[3/4] bg-ide-panel rounded-lg shadow-2xl border border-ide-border overflow-hidden transition-all duration-300 ${isSidebarOpen ? '' : 'scale-105'}`}>
+                             <div className="absolute top-0 left-0 right-0 p-3 bg-gradient-to-b from-black/50 to-transparent z-10 flex justify-between items-start">
                                 <span className="text-white text-xs font-bold uppercase tracking-widest flex items-center gap-2">
                                     <Icons.Camera size={14}/> Lookbook (Hero)
                                 </span>
                             </div>
                             {activeConcept.images.hero ? (
-                                <img src={activeConcept.images.hero.url} className="w-full h-full object-cover" alt="Hero" />
+                                <>
+                                    <img src={activeConcept.images.hero.url} className="w-full h-full object-cover" alt="Hero" />
+                                    {/* Download Button */}
+                                    <button 
+                                        onClick={() => downloadImage(activeConcept.images.hero!.url, `${activeConcept.name}-Hero.png`)}
+                                        className="absolute top-3 right-3 p-2 bg-black/40 hover:bg-black/70 text-white rounded opacity-0 group-hover:opacity-100 transition backdrop-blur-md z-20"
+                                        title="Download Image"
+                                    >
+                                        <Icons.Download size={16} />
+                                    </button>
+                                </>
                             ) : (
                                 <div className="w-full h-full flex items-center justify-center">
                                     <Icons.Spinner className="animate-spin text-ide-muted" />
@@ -104,14 +133,24 @@ export const GenerationBoard: React.FC = () => {
                         </div>
 
                          {/* 2. Illustration View (Artistic Mood) - Read Only */}
-                        <div className="relative group h-[70vh] aspect-[3/4] bg-white rounded-lg shadow-xl border border-ide-border overflow-hidden rotate-1 transform hover:rotate-0 transition duration-300">
-                             <div className="absolute top-0 left-0 right-0 p-3 bg-white/90 border-b border-gray-100 z-10">
+                        <div className={`relative group h-[70vh] aspect-[3/4] bg-white rounded-lg shadow-xl border border-ide-border overflow-hidden rotate-1 transform hover:rotate-0 transition-all duration-300 ${isSidebarOpen ? '' : 'h-[80vh]'}`}>
+                             <div className="absolute top-0 left-0 right-0 p-3 bg-white/90 border-b border-gray-100 z-10 flex justify-between items-start">
                                 <span className="text-black text-xs font-bold uppercase tracking-widest flex items-center gap-2">
                                     <Icons.PenTool size={14}/> Mood Sketch
                                 </span>
                             </div>
                             {activeConcept.images.illustration ? (
-                                <img src={activeConcept.images.illustration.url} className="w-full h-full object-cover" alt="Fashion Illustration" />
+                                <>
+                                    <img src={activeConcept.images.illustration.url} className="w-full h-full object-cover" alt="Fashion Illustration" />
+                                     {/* Download Button */}
+                                     <button 
+                                        onClick={() => downloadImage(activeConcept.images.illustration!.url, `${activeConcept.name}-Sketch.png`)}
+                                        className="absolute top-3 right-3 p-2 bg-gray-200/50 hover:bg-gray-200 text-black rounded opacity-0 group-hover:opacity-100 transition backdrop-blur-md z-20"
+                                        title="Download Sketch"
+                                    >
+                                        <Icons.Download size={16} />
+                                    </button>
+                                </>
                             ) : (
                                 <div className="w-full h-full flex items-center justify-center bg-gray-50">
                                     <Icons.Spinner className="animate-spin text-gray-400" />
@@ -121,33 +160,39 @@ export const GenerationBoard: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* Sidebar Info */}
-                    <div className="w-80 bg-ide-panel border-l border-ide-border p-6 overflow-y-auto shadow-xl z-10">
-                        <h3 className="text-xs font-bold text-ide-muted uppercase mb-4 flex items-center gap-2">
-                            <Icons.Cut size={14}/> Design Concept
-                        </h3>
-                        <p className="text-sm text-ide-text leading-relaxed font-light mb-8">
-                            {activeConcept.description}
-                        </p>
-
-                        <h3 className="text-xs font-bold text-ide-muted uppercase mb-4 flex items-center gap-2">
-                             Workflow
-                        </h3>
-                        <div className="space-y-3">
-                            <div className="p-3 bg-ide-bg rounded border border-ide-border">
-                                <span className="block text-[10px] text-ide-muted uppercase mb-1">Primary Asset</span>
-                                <span className="text-xs font-mono text-ide-text">Hero Image (Editable)</span>
-                            </div>
-                            <div className="p-3 bg-ide-bg rounded border border-ide-border">
-                                <span className="block text-[10px] text-ide-muted uppercase mb-1">Secondary Asset</span>
-                                <span className="text-xs font-mono text-ide-text">Fashion Illustration (Auto)</span>
-                            </div>
-                        </div>
-
-                         <div className="mt-8 pt-6 border-t border-ide-border text-center">
-                            <p className="text-[10px] text-ide-muted italic">
-                                "Editing the Hero image will automatically update the Mood Sketch."
+                    {/* Sidebar Info - Collapsible */}
+                    <div 
+                        className={`bg-ide-panel border-l border-ide-border overflow-y-auto shadow-xl z-10 transition-all duration-300 ease-in-out
+                        ${isSidebarOpen ? 'w-80 p-6 opacity-100' : 'w-0 p-0 opacity-0 overflow-hidden border-none'}
+                        `}
+                    >
+                        <div className="w-80"> {/* Fixed width container to prevent content reflow during transition */}
+                            <h3 className="text-xs font-bold text-ide-muted uppercase mb-4 flex items-center gap-2">
+                                <Icons.Cut size={14}/> Design Concept
+                            </h3>
+                            <p className="text-sm text-ide-text leading-relaxed font-light mb-8">
+                                {activeConcept.description}
                             </p>
+
+                            <h3 className="text-xs font-bold text-ide-muted uppercase mb-4 flex items-center gap-2">
+                                 Workflow
+                            </h3>
+                            <div className="space-y-3">
+                                <div className="p-3 bg-ide-bg rounded border border-ide-border">
+                                    <span className="block text-[10px] text-ide-muted uppercase mb-1">Primary Asset</span>
+                                    <span className="text-xs font-mono text-ide-text">Hero Image (Editable)</span>
+                                </div>
+                                <div className="p-3 bg-ide-bg rounded border border-ide-border">
+                                    <span className="block text-[10px] text-ide-muted uppercase mb-1">Secondary Asset</span>
+                                    <span className="text-xs font-mono text-ide-text">Fashion Illustration (Auto)</span>
+                                </div>
+                            </div>
+
+                             <div className="mt-8 pt-6 border-t border-ide-border text-center">
+                                <p className="text-[10px] text-ide-muted italic">
+                                    "Editing the Hero image will automatically update the Mood Sketch."
+                                </p>
+                            </div>
                         </div>
                     </div>
                 </div>
