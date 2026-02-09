@@ -246,16 +246,19 @@ ${assetManifest || "No assets uploaded."}
         try {
             const base64Data = heroImageBase64.split(',')[1];
             
+            // Updated Prompt: "Designer's Workbook" with reasoning annotations
             const sketchPrompt = `
-                Create a professional Fashion Design Sketch showing TWO views side-by-side:
-                1. Front View (Walking pose)
-                2. Back View (Standing pose, showing rear details)
+                Analyze the provided design and generate a "Designer's Workbook" page.
                 
-                Style: High-fashion croquis illustration.
-                Medium: Copic markers, watercolor wash, and fine ink outlines.
-                Proportions: Elongated 9-head fashion figure (stylized long legs, small head).
-                Execution: Informative but artistic. Show drape, seam lines, and texture clearly.
-                Background: Cream colored textured art paper. Isolate the figures. Remove all photorealistic scenery.
+                VISUAL REQUIREMENTS:
+                1. DRAWING STYLE: Hand-drawn pencil sketch with marker rendering on textured paper.
+                2. VIEWS: Show both FRONT and BACK views of the outfit side-by-side.
+                3. MODEL: HEADLESS croquis (no face). Focus strictly on the garment structure.
+                
+                REASONING & ANNOTATIONS (Crucial):
+                - Analyze the design to identify specific materials, cuts, and construction details.
+                - Add LEGIBLE HAND-WRITTEN NOTES with arrows pointing to these details (e.g. "pleated chiffon", "structured shoulder", "invisible zip").
+                - The text should look like authentic, handwritten designer notes explaining the thought process.
             `;
 
             const response = await this.ai.models.generateContent({
