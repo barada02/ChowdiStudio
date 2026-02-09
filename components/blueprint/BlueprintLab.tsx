@@ -5,6 +5,16 @@ import { geminiService } from '../../services/geminiService';
 import { AppTab, ViewType, AgentStatus } from '../../types';
 import { Icons } from '../ui/Icons';
 
+// Helper to get natural dimensions of an image URL (Base64)
+const getImageDimensions = (src: string): Promise<{ width: number; height: number }> => {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
+        img.onerror = reject;
+        img.src = src;
+    });
+};
+
 export const BlueprintLab: React.FC = () => {
     const { state, dispatch } = useStudio();
 
@@ -63,136 +73,201 @@ export const BlueprintLab: React.FC = () => {
         generateData();
     }, [finalConcept, state.agentStatus]);
 
-    // --- 3. Export PDF Function ---
-    const handleExportPdf = () => {
+    // --- 3. Export PDF Function (Magazine Style Engine) ---
+    const handleExportPdf = async () => {
         if (!finalConcept || !finalConcept.techPack) return;
         const { techPack } = finalConcept;
 
         const doc = new jsPDF();
         const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
         const margin = 15;
+        const contentWidth = pageWidth - (margin * 2);
+
+        // --- Helper: Fit Image without Distortion ---
+        // Calculates aspect ratio and centers the image within a bounding box
+        const drawImageFit = async (url: string, y: number, maxH: number) => {
+            try {
+                const dims = await getImageDimensions(url);
+                // Calculate scale to fit width AND height constraints
+                const scale = Math.min(contentWidth / dims.width, maxH / dims.height);
+                
+                const w = dims.width * scale;
+                const h = dims.height * scale;
+                
+                const x = margin + (contentWidth - w) / 2; // Center horizontally
+                
+                doc.addImage(url, 'PNG', x, y, w, h);
+                return h; // Return actual used height
+            } catch (e) {
+                console.error("Image processing error", e);
+                return 0;
+            }
+        };
+
+        // ============================
+        // PAGE 1: COVER / EDITORIAL
+        // ============================
         let yPos = 20;
-
-        // --- Header ---
-        doc.setFontSize(22);
-        doc.setFont("helvetica", "bold");
-        doc.text(finalConcept.name.toUpperCase(), margin, yPos);
         
-        yPos += 10;
+        // Brand Header
         doc.setFontSize(10);
-        doc.setFont("courier", "normal");
-        doc.text(`STYLE: ${techPack.style_number} | SEASON: ${techPack.season}`, margin, yPos);
-        doc.text(`DATE: ${new Date().toLocaleDateString()}`, pageWidth - margin - 40, yPos);
+        doc.setTextColor(150);
+        doc.setFont("helvetica", "bold");
+        doc.text("CHOWDI STUDIO DESIGN REPORT", margin, yPos);
+        yPos += 20;
+        
+        // Title (Large)
+        doc.setFontSize(24);
+        doc.setTextColor(0);
+        const titleLines = doc.splitTextToSize(finalConcept.name.toUpperCase(), contentWidth);
+        doc.text(titleLines, margin, yPos);
+        yPos += (titleLines.length * 10) + 5;
 
+        // Subtitles (Season & Style)
+        doc.setFontSize(11);
+        doc.setFont("courier", "normal");
+        doc.setTextColor(80);
+        doc.text(`${techPack.season}  |  ${techPack.style_number}  |  ${new Date().toLocaleDateString()}`, margin, yPos);
         yPos += 15;
 
-        // --- Visuals (Page 1) ---
-        const imgWidth = (pageWidth - (margin * 3)) / 2;
-        const imgHeight = imgWidth * 1.33; // 3:4 aspect ratio
-
-        try {
-            if (finalConcept.images.hero) {
-                doc.setFont("helvetica", "bold");
-                doc.text("REFERENCE LOOK", margin, yPos - 3);
-                doc.addImage(finalConcept.images.hero.url, 'PNG', margin, yPos, imgWidth, imgHeight);
-            }
-
-            if (finalConcept.images.technical) {
-                doc.text("TECHNICAL FLAT", margin + imgWidth + margin, yPos - 3);
-                doc.addImage(finalConcept.images.technical.url, 'PNG', margin + imgWidth + margin, yPos, imgWidth, imgHeight);
-            }
-        } catch (e) {
-            console.error("Image export error:", e);
+        // Hero Image (Dominant Visual)
+        // Calculate remaining height to fit description at bottom
+        const footerSpace = 40;
+        const maxHeroHeight = pageHeight - yPos - footerSpace - margin;
+        
+        if (finalConcept.images.hero) {
+             const imgH = await drawImageFit(finalConcept.images.hero.url, yPos, maxHeroHeight);
+             yPos += imgH + 15;
         }
 
-        yPos += imgHeight + 20;
+        // Concept Description
+        doc.setFont("times", "italic");
+        doc.setFontSize(12);
+        doc.setTextColor(60);
+        const descLines = doc.splitTextToSize(finalConcept.description, contentWidth);
+        doc.text(descLines, margin, yPos);
 
-        // --- Measurements ---
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(14);
-        doc.text("CONSTRUCTION SPECIFICATIONS", margin, yPos);
-        yPos += 8;
-
-        doc.setDrawColor(200);
-        doc.setLineWidth(0.1);
-        doc.line(margin, yPos, pageWidth - margin, yPos); // Header line
-        yPos += 5;
-
-        doc.setFontSize(9);
-        doc.text("POINT OF MEASURE (POM)", margin, yPos);
-        doc.text(`VALUE (${techPack.measurements[0]?.unit})`, pageWidth - margin - 40, yPos, { align: 'right' });
-        doc.text("TOL +/-", pageWidth - margin, yPos, { align: 'right' });
-        yPos += 3;
-        doc.line(margin, yPos, pageWidth - margin, yPos); 
-        yPos += 6;
-
-        doc.setFont("helvetica", "normal");
-        techPack.measurements.forEach((m, i) => {
-            if (yPos > 280) {
-                doc.addPage();
-                yPos = 20;
-            }
-            
-            // Striping
-            if (i % 2 === 1) {
-                doc.setFillColor(245, 245, 245);
-                doc.rect(margin, yPos - 4, pageWidth - (margin * 2), 6, 'F');
-            }
-
-            doc.text(m.pom, margin + 2, yPos);
-            doc.text(m.value.toString(), pageWidth - margin - 40, yPos, { align: 'right' });
-            doc.text(m.tolerance.toString(), pageWidth - margin, yPos, { align: 'right' });
-            yPos += 6;
-        });
-
-        // --- BOM (New Page) ---
+        // ============================
+        // PAGE 2: TECHNICAL DETAILS
+        // ============================
         doc.addPage();
         yPos = 20;
 
         doc.setFont("helvetica", "bold");
-        doc.setFontSize(14);
+        doc.setFontSize(16);
+        doc.setTextColor(0);
+        doc.text("TECHNICAL SPECIFICATIONS", margin, yPos);
+        yPos += 15;
+
+        // Technical Flat (Sized appropriately)
+        if (finalConcept.images.technical) {
+            // Allow it to take up to 1/3 of page height
+            const imgH = await drawImageFit(finalConcept.images.technical.url, yPos, 120);
+            yPos += imgH + 20;
+        }
+
+        // Construction Notes
+        doc.setFontSize(12);
+        doc.text("CONSTRUCTION NOTES", margin, yPos);
+        yPos += 8;
+        
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "normal");
+        techPack.construction_details.forEach(note => {
+            doc.text(`• ${note}`, margin + 5, yPos);
+            yPos += 6;
+        });
+        yPos += 15;
+
+        // Measurements Table
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(12);
+        doc.text("MEASUREMENTS (POM)", margin, yPos);
+        yPos += 8;
+        
+        // Table Header
+        doc.setFillColor(245);
+        doc.rect(margin, yPos - 5, contentWidth, 8, 'F');
+        doc.setFontSize(9);
+        doc.setTextColor(100);
+        doc.text("POINT OF MEASURE", margin + 2, yPos);
+        doc.text(`VALUE (${techPack.measurements[0]?.unit})`, pageWidth - margin - 40, yPos, { align: 'right' });
+        doc.text("TOL +/-", pageWidth - margin - 5, yPos, { align: 'right' });
+        yPos += 8;
+
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(0);
+        techPack.measurements.forEach((m, i) => {
+            if (yPos > pageHeight - 20) { doc.addPage(); yPos = 20; }
+            doc.text(m.pom, margin + 2, yPos);
+            doc.text(m.value.toString(), pageWidth - margin - 40, yPos, { align: 'right' });
+            doc.text(m.tolerance.toString(), pageWidth - margin - 5, yPos, { align: 'right' });
+            
+            // Subtle Grid Line
+            doc.setDrawColor(230);
+            doc.line(margin, yPos + 2, pageWidth - margin, yPos + 2);
+            yPos += 8;
+        });
+
+        // ============================
+        // PAGE 3: BOM & COSTING
+        // ============================
+        doc.addPage();
+        yPos = 20;
+
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(16);
         doc.text("BILL OF MATERIALS (BOM)", margin, yPos);
         yPos += 15;
 
         techPack.bom.forEach((item) => {
-            if (yPos > 270) {
-                doc.addPage();
-                yPos = 20;
-            }
-
-            doc.setDrawColor(220);
-            doc.rect(margin, yPos, pageWidth - (margin * 2), 25);
-
+            if (yPos > pageHeight - 40) { doc.addPage(); yPos = 20; }
+            
+            // BOM Card
+            doc.setDrawColor(200);
+            doc.rect(margin, yPos, contentWidth, 24);
+            
+            // Location Tag
             doc.setFontSize(8);
             doc.setTextColor(100);
-            doc.text(item.location.toUpperCase(), margin + 5, yPos + 8);
+            doc.text(item.location.toUpperCase(), margin + 4, yPos + 6);
             
+            // Item Name
             doc.setFontSize(11);
             doc.setTextColor(0);
             doc.setFont("helvetica", "bold");
-            doc.text(item.item, margin + 5, yPos + 15);
+            doc.text(item.item, margin + 4, yPos + 14);
             
+            // Description
             doc.setFont("helvetica", "normal");
             doc.setFontSize(9);
             doc.setTextColor(80);
-            doc.text(item.description, margin + 5, yPos + 21);
+            // Wrap text if description is long
+            const desc = doc.splitTextToSize(item.description, contentWidth - 100);
+            doc.text(desc, margin + 4, yPos + 20);
 
+            // Quantities & Cost
             doc.setFont("courier", "bold");
             doc.setTextColor(0);
-            doc.text(`QTY: ${item.quantity}`, pageWidth - margin - 50, yPos + 10);
-            doc.text(`EST: $${item.cost_estimate}`, pageWidth - margin - 50, yPos + 18);
+            doc.text(`QTY: ${item.quantity}`, pageWidth - margin - 40, yPos + 10, { align: 'right' });
+            doc.text(`EST: $${item.cost_estimate}`, pageWidth - margin - 5, yPos + 10, { align: 'right' });
 
-            yPos += 30;
+            yPos += 28;
         });
 
-        // Total Cost
-        yPos += 5;
+        // Total Cost Footer
+        yPos += 10;
+        doc.setDrawColor(0);
+        doc.setLineWidth(0.5);
+        doc.line(margin, yPos, pageWidth - margin, yPos);
+        yPos += 10;
+        
         doc.setFont("helvetica", "bold");
-        doc.setFontSize(12);
-        doc.text("TOTAL ESTIMATED COST:", pageWidth - margin - 60, yPos);
+        doc.setFontSize(14);
+        doc.text("TOTAL ESTIMATED COST", pageWidth - margin - 80, yPos, { align: 'right' });
         doc.setTextColor(0, 150, 0); // Green
-        doc.text(`$${techPack.total_cost_estimate.toFixed(2)}`, pageWidth - margin, yPos, { align: 'right' });
-        doc.setTextColor(0);
+        doc.text(`$${techPack.total_cost_estimate.toFixed(2)}`, pageWidth - margin - 5, yPos, { align: 'right' });
 
         doc.save(`${finalConcept.name.replace(/\s+/g, '_')}_TechPack.pdf`);
     };
