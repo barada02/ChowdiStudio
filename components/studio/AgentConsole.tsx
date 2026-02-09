@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import ReactMarkdown from 'react-markdown';
 import { useStudio } from '../../context/StudioContext';
 import { geminiService } from '../../services/geminiService';
 import { Icons } from '../ui/Icons';
@@ -127,11 +128,21 @@ export const AgentConsole: React.FC = () => {
                     <div key={msg.id} className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
                         <div 
                             className={`
-                                max-w-[90%] p-3 rounded-lg text-sm shadow-sm whitespace-pre-wrap
+                                max-w-[90%] p-3 rounded-lg text-sm shadow-sm
                                 ${msg.role === 'user' ? 'bg-ide-accent text-white rounded-br-none' : 'bg-ide-bg border border-ide-border text-ide-text rounded-bl-none'}
                             `}
                         >
-                            {msg.content}
+                            <ReactMarkdown
+                                components={{
+                                    strong: ({node, ...props}) => <span className={`font-bold ${msg.role === 'user' ? 'text-white' : 'text-ide-accent'}`} {...props} />,
+                                    ul: ({node, ...props}) => <ul className="list-disc pl-4 mt-2 space-y-1" {...props} />,
+                                    ol: ({node, ...props}) => <ol className="list-decimal pl-4 mt-2 space-y-1" {...props} />,
+                                    li: ({node, ...props}) => <li className="mb-1" {...props} />,
+                                    p: ({node, ...props}) => <p className="mb-2 last:mb-0 leading-relaxed" {...props} />,
+                                }}
+                            >
+                                {msg.content}
+                            </ReactMarkdown>
                         </div>
                         {msg.thoughtSignature && (
                             <div className="max-w-[90%] mt-1 text-[10px] text-ide-muted font-mono bg-ide-bg p-2 rounded border border-ide-border border-dashed">

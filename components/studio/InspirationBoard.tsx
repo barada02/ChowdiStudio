@@ -117,15 +117,25 @@ export const InspirationBoard: React.FC = () => {
                                     />
                                 )}
                                 {asset.type === 'video' && (
-                                    <video 
-                                        src={asset.content} 
-                                        className="w-full h-auto block bg-black" 
-                                        controls={false} 
-                                        autoPlay={false} 
-                                        muted 
-                                        loop 
-                                        playsInline 
-                                    />
+                                    <>
+                                        <video 
+                                            src={asset.content} 
+                                            className="w-full h-auto block bg-black object-cover aspect-square" 
+                                            muted 
+                                            loop 
+                                            playsInline 
+                                            onMouseOver={e => e.currentTarget.play()}
+                                            onMouseOut={e => {
+                                                e.currentTarget.pause();
+                                                e.currentTarget.currentTime = 0;
+                                            }}
+                                        />
+                                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none group-hover:opacity-0 transition-opacity">
+                                            <div className="bg-black/50 p-1.5 rounded-full backdrop-blur-sm">
+                                                 <Icons.Video size={14} className="text-white" />
+                                            </div>
+                                        </div>
+                                    </>
                                 )}
                                 {asset.type === 'audio' && (
                                      <div className="w-full h-20 flex flex-col items-center justify-center bg-ide-panel text-ide-muted p-2">

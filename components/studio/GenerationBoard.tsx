@@ -5,7 +5,8 @@ import { Icons } from '../ui/Icons';
 
 export const GenerationBoard: React.FC = () => {
     const { state, dispatch } = useStudio();
-    const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+    // Default to collapsed sidebar
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
     const handleSelect = (id: string | null) => {
         // If clicking existing active, or explicitly setting null
