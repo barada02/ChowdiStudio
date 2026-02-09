@@ -29,6 +29,19 @@ export const FocusEditor: React.FC = () => {
 
     const activeConcept = state.generatedConcepts.find(c => c.id === focusedImage?.conceptId);
 
+    // DETERMINE READ-ONLY STATUS
+    // If it's not the Hero (Lookbook), it's a generated derivative and shouldn't be edited directly.
+    const isReadOnly = focusedImage?.view === ViewType.ILLUSTRATION || focusedImage?.view === ViewType.TECHNICAL;
+
+    // Force 'Pan' tool if read-only
+    useEffect(() => {
+        if (isReadOnly) {
+            setTool('pan');
+        } else {
+            setTool('brush');
+        }
+    }, [isReadOnly]);
+
     // Setup Mask Canvas sizing to match Image
     useEffect(() => {
         if (!focusedImage) return;
@@ -75,9 +88,6 @@ export const FocusEditor: React.FC = () => {
 
     // --- Zoom Logic ---
     const handleWheel = (e: React.WheelEvent) => {
-        // Only zoom if ctrl key is pressed OR if using a specific tool, otherwise standard scroll might be expected.
-        // But since we use overflow-hidden, we can hijack scroll for zoom or pan.
-        // Let's hijack for Zoom if no modifier, mirroring standard CAD tools.
         const scaleAmount = -e.deltaY * 0.001;
         const newZoom = Math.min(Math.max(0.1, zoom + scaleAmount), 5);
         setZoom(newZoom);
@@ -90,8 +100,6 @@ export const FocusEditor: React.FC = () => {
         if (!canvas) return { x: 0, y: 0 };
 
         const rect = canvas.getBoundingClientRect();
-        // The rect accounts for the CSS transform (zoom/pan)
-        // We calculate the scale between the rendered rect and the internal canvas resolution
         const scaleX = canvas.width / rect.width;
         const scaleY = canvas.height / rect.height;
 
@@ -106,6 +114,9 @@ export const FocusEditor: React.FC = () => {
             startPan(e);
             return;
         }
+        
+        // Safety check for Read Only
+        if (isReadOnly) return;
 
         setIsDrawing(true);
         const ctx = maskCanvasRef.current?.getContext('2d');
@@ -115,16 +126,9 @@ export const FocusEditor: React.FC = () => {
         
         ctx.beginPath();
         ctx.moveTo(x, y);
-        
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
         
-        // Brush size logic:
-        // brushSize is roughly "screen pixels".
-        // rect.width is rendered width in screen pixels.
-        // canvas.width is actual width.
-        // ratio = canvas.width / rect.width.
-        // actualLineWidth = brushSize * ratio.
         const rect = maskCanvasRef.current!.getBoundingClientRect();
         const scale = maskCanvasRef.current!.width / rect.width;
         
@@ -165,7 +169,7 @@ export const FocusEditor: React.FC = () => {
 
     // Composite layers for Export
     const handleApplyEdit = async () => {
-        if (!focusedImage || !activeConcept || !maskCanvasRef.current || !imageRef.current) return;
+        if (!focusedImage || !activeConcept || !maskCanvasRef.current || !imageRef.current || isReadOnly) return;
         
         dispatch({ type: 'SET_AGENT_STATUS', payload: AgentStatus.EDITING });
         
@@ -203,18 +207,24 @@ export const FocusEditor: React.FC = () => {
                 } 
             });
 
-            // 6. Regenerate Technical Sketch
+            // 6. Regenerate Technical Sketch & Mood Sketch
+            // NOTE: We regenerate dependent assets to keep them in sync
             const techId = activeConcept.images.technical?.id || `img-${activeConcept.id}-t`;
-            const newTechUrl = await geminiService.generateTechnicalSketch(newHeroUrl);
+            const sketchId = activeConcept.images.illustration?.id || `img-${activeConcept.id}-s`;
 
-            dispatch({ 
-                type: 'UPDATE_CONCEPT_IMAGE', 
-                payload: { 
-                    conceptId: activeConcept.id, 
-                    imageId: techId, 
-                    view: ViewType.TECHNICAL, 
-                    url: newTechUrl 
-                } 
+            // We don't await these to make the UI feel snappier, let them update in background or next step
+            geminiService.generateTechnicalSketch(newHeroUrl).then(url => {
+                 dispatch({ 
+                    type: 'UPDATE_CONCEPT_IMAGE', 
+                    payload: { conceptId: activeConcept.id, imageId: techId, view: ViewType.TECHNICAL, url } 
+                });
+            });
+
+             geminiService.generateFashionIllustration(newHeroUrl).then(url => {
+                 dispatch({ 
+                    type: 'UPDATE_CONCEPT_IMAGE', 
+                    payload: { conceptId: activeConcept.id, imageId: sketchId, view: ViewType.ILLUSTRATION, url } 
+                });
             });
             
             // Cleanup
@@ -236,7 +246,11 @@ export const FocusEditor: React.FC = () => {
                 <div className="p-4 border-b border-ide-border flex justify-between items-center bg-ide-bg z-10">
                     <div>
                         <h3 className="text-ide-text font-medium flex items-center gap-2">
-                            <Icons.Edit size={16} className="text-ide-accent" /> Editor: {activeConcept?.name}
+                            {isReadOnly ? (
+                                <><Icons.Zoom size={16} className="text-ide-accent" /> Inspector: {activeConcept?.name}</>
+                            ) : (
+                                <><Icons.Edit size={16} className="text-ide-accent" /> Editor: {activeConcept?.name}</>
+                            )}
                         </h3>
                     </div>
                     <button 
@@ -277,13 +291,14 @@ export const FocusEditor: React.FC = () => {
                                 />
 
                                 {/* 2. Mask Canvas (Drawing Layer) */}
+                                {/* Hide cursor crosshair if read only */}
                                 <canvas 
                                     ref={maskCanvasRef}
                                     onMouseDown={startDraw}
                                     onMouseMove={draw}
                                     onMouseUp={stopDraw}
                                     onMouseLeave={stopDraw}
-                                    className={`absolute inset-0 w-full h-full touch-none ${tool === 'pan' ? 'cursor-grab active:cursor-grabbing' : 'cursor-crosshair'}`}
+                                    className={`absolute inset-0 w-full h-full touch-none ${tool === 'pan' ? 'cursor-grab active:cursor-grabbing' : isReadOnly ? 'cursor-default' : 'cursor-crosshair'}`}
                                 />
                             </div>
                         </div>
@@ -299,7 +314,9 @@ export const FocusEditor: React.FC = () => {
                          
                          {/* Tools Section */}
                          <div className="space-y-4">
-                            <label className="text-xs font-bold text-ide-muted uppercase block">Viewport & Masking</label>
+                            <label className="text-xs font-bold text-ide-muted uppercase block">
+                                {isReadOnly ? 'Inspection Tools' : 'Viewport & Masking'}
+                            </label>
                             
                             <div className="flex gap-2 bg-ide-bg p-1 rounded border border-ide-border">
                                 <button
@@ -309,20 +326,25 @@ export const FocusEditor: React.FC = () => {
                                 >
                                     <Icons.Hand size={14} />
                                 </button>
-                                <button
-                                    onClick={() => setTool('brush')}
-                                    title="Mask Brush"
-                                    className={`flex-1 py-2 rounded flex items-center justify-center gap-2 text-xs font-bold transition ${tool === 'brush' ? 'bg-ide-accent text-white shadow-sm' : 'text-ide-muted hover:text-ide-text hover:bg-ide-panel'}`}
-                                >
-                                    <Icons.Brush size={14} />
-                                </button>
-                                <button
-                                    onClick={() => setTool('eraser')}
-                                    title="Eraser"
-                                    className={`flex-1 py-2 rounded flex items-center justify-center gap-2 text-xs font-bold transition ${tool === 'eraser' ? 'bg-ide-panel text-ide-text shadow-sm border border-ide-border' : 'text-ide-muted hover:text-ide-text hover:bg-ide-panel'}`}
-                                >
-                                    <Icons.Eraser size={14} />
-                                </button>
+                                
+                                {!isReadOnly && (
+                                    <>
+                                        <button
+                                            onClick={() => setTool('brush')}
+                                            title="Mask Brush"
+                                            className={`flex-1 py-2 rounded flex items-center justify-center gap-2 text-xs font-bold transition ${tool === 'brush' ? 'bg-ide-accent text-white shadow-sm' : 'text-ide-muted hover:text-ide-text hover:bg-ide-panel'}`}
+                                        >
+                                            <Icons.Brush size={14} />
+                                        </button>
+                                        <button
+                                            onClick={() => setTool('eraser')}
+                                            title="Eraser"
+                                            className={`flex-1 py-2 rounded flex items-center justify-center gap-2 text-xs font-bold transition ${tool === 'eraser' ? 'bg-ide-panel text-ide-text shadow-sm border border-ide-border' : 'text-ide-muted hover:text-ide-text hover:bg-ide-panel'}`}
+                                        >
+                                            <Icons.Eraser size={14} />
+                                        </button>
+                                    </>
+                                )}
                             </div>
 
                             <div className="space-y-2 pt-2">
@@ -340,57 +362,78 @@ export const FocusEditor: React.FC = () => {
                                     className="w-full accent-ide-accent h-1.5 bg-ide-border rounded-lg appearance-none cursor-pointer"
                                 />
                             </div>
-
-                             <div className="space-y-2 pt-2">
-                                <div className="flex justify-between text-xs text-ide-muted">
-                                    <span>Brush Size</span>
-                                    <span>{brushSize}px</span>
+                            
+                            {!isReadOnly && (
+                                <div className="space-y-2 pt-2">
+                                    <div className="flex justify-between text-xs text-ide-muted">
+                                        <span>Brush Size</span>
+                                        <span>{brushSize}px</span>
+                                    </div>
+                                    <input 
+                                        type="range" 
+                                        min="5" 
+                                        max="100" 
+                                        value={brushSize}
+                                        onChange={(e) => setBrushSize(parseInt(e.target.value))}
+                                        className="w-full accent-ide-accent h-1.5 bg-ide-border rounded-lg appearance-none cursor-pointer"
+                                    />
                                 </div>
-                                <input 
-                                    type="range" 
-                                    min="5" 
-                                    max="100" 
-                                    value={brushSize}
-                                    onChange={(e) => setBrushSize(parseInt(e.target.value))}
-                                    className="w-full accent-ide-accent h-1.5 bg-ide-border rounded-lg appearance-none cursor-pointer"
-                                />
-                            </div>
+                            )}
                          </div>
 
                          <div className="h-px bg-ide-border w-full"></div>
 
-                         {/* Prompt Section */}
-                         <div className="flex-1 flex flex-col gap-2">
-                            <label className="text-xs font-bold text-ide-muted uppercase">Edit Instruction</label>
-                            <textarea 
-                                className="w-full flex-1 bg-ide-bg border border-ide-border rounded p-3 text-sm text-ide-text focus:border-ide-accent outline-none resize-none focus:ring-1 focus:ring-ide-accent transition min-h-[120px]"
-                                placeholder="Highlight an area and describe the change (e.g., 'Change fabric to sheer lace', 'Add gold embroidery')..."
-                                value={prompt}
-                                onChange={(e) => setPrompt(e.target.value)}
-                            />
-                         </div>
-                         
-                         <div className="bg-ide-bg p-3 rounded text-[10px] text-ide-muted border border-ide-border">
-                             <strong className="block mb-1 text-ide-text">Pro Tip:</strong>
-                             Use the Hand tool to move around large images. Highlighting is precise at high zoom levels.
-                         </div>
+                         {/* Prompt Section OR Read Only Message */}
+                         {!isReadOnly ? (
+                             <>
+                                <div className="flex-1 flex flex-col gap-2">
+                                    <label className="text-xs font-bold text-ide-muted uppercase">Edit Instruction</label>
+                                    <textarea 
+                                        className="w-full flex-1 bg-ide-bg border border-ide-border rounded p-3 text-sm text-ide-text focus:border-ide-accent outline-none resize-none focus:ring-1 focus:ring-ide-accent transition min-h-[120px]"
+                                        placeholder="Highlight an area and describe the change (e.g., 'Change fabric to sheer lace', 'Add gold embroidery')..."
+                                        value={prompt}
+                                        onChange={(e) => setPrompt(e.target.value)}
+                                    />
+                                </div>
+                                
+                                <div className="bg-ide-bg p-3 rounded text-[10px] text-ide-muted border border-ide-border">
+                                    <strong className="block mb-1 text-ide-text">Pro Tip:</strong>
+                                    Use the Hand tool to move around large images. Highlighting is precise at high zoom levels.
+                                </div>
 
-                         <button 
-                            onClick={handleApplyEdit}
-                            disabled={state.agentStatus === AgentStatus.EDITING || !prompt}
-                            className={`
-                                w-full py-4 rounded font-bold text-sm flex items-center justify-center gap-2 transition
-                                ${state.agentStatus === AgentStatus.EDITING 
-                                    ? 'bg-ide-muted cursor-wait opacity-70' 
-                                    : 'bg-ide-accent hover:bg-ide-accent-hover text-white shadow-lg hover:shadow-xl'}
-                            `}
-                         >
-                             {state.agentStatus === AgentStatus.EDITING ? (
-                                 <><Icons.Spinner className="animate-spin" size={16} /> Processing...</>
-                             ) : (
-                                 <><Icons.Send size={16} /> Generate Edit</>
-                             )}
-                         </button>
+                                <button 
+                                    onClick={handleApplyEdit}
+                                    disabled={state.agentStatus === AgentStatus.EDITING || !prompt}
+                                    className={`
+                                        w-full py-4 rounded font-bold text-sm flex items-center justify-center gap-2 transition
+                                        ${state.agentStatus === AgentStatus.EDITING 
+                                            ? 'bg-ide-muted cursor-wait opacity-70' 
+                                            : 'bg-ide-accent hover:bg-ide-accent-hover text-white shadow-lg hover:shadow-xl'}
+                                    `}
+                                >
+                                    {state.agentStatus === AgentStatus.EDITING ? (
+                                        <><Icons.Spinner className="animate-spin" size={16} /> Processing...</>
+                                    ) : (
+                                        <><Icons.Send size={16} /> Generate Edit</>
+                                    )}
+                                </button>
+                             </>
+                         ) : (
+                             <div className="flex-1 flex flex-col justify-center items-center text-center p-4 opacity-70 bg-ide-bg rounded border border-ide-border border-dashed">
+                                <Icons.Layers size={48} className="text-ide-muted mb-4 opacity-50" />
+                                <h4 className="text-sm font-bold text-ide-text uppercase tracking-wide">Read Only View</h4>
+                                <p className="text-xs text-ide-muted mt-3 leading-relaxed">
+                                    This asset is auto-generated from the Lookbook. <br/><br/>
+                                    To modify the design, please edit the <strong>Lookbook (Hero)</strong> image. The sketches will update automatically.
+                                </p>
+                                <button 
+                                    onClick={() => dispatch({ type: 'SET_FOCUSED_IMAGE', payload: activeConcept?.images.hero?.id || null })}
+                                    className="mt-6 px-4 py-2 bg-ide-panel border border-ide-border rounded text-xs font-bold hover:border-ide-accent hover:text-ide-accent transition shadow-sm"
+                                >
+                                    Switch to Lookbook
+                                </button>
+                             </div>
+                         )}
                     </div>
                 </div>
             </div>
