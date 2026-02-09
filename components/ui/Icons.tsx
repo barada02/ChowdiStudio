@@ -38,6 +38,7 @@ export const Icons = {
     Cut: Scissors,
     Scissors: Scissors,
     Save: Download,
+    Download: Download,
     Sun: Sun,
     Moon: Moon,
     Drag: GripVertical,

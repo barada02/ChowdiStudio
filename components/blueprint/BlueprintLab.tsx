@@ -17,7 +17,6 @@ export const BlueprintLab: React.FC = () => {
         const generateFlat = async () => {
             if (finalConcept && finalConcept.images.hero && !finalConcept.images.technical) {
                 const techId = `img-${finalConcept.id}-t`;
-                // Temporary placeholder URL or just rely on async state update
                 const techUrl = await geminiService.generateTechnicalSketch(finalConcept.images.hero.url);
                 
                 dispatch({ 
@@ -31,7 +30,6 @@ export const BlueprintLab: React.FC = () => {
                 });
             }
         };
-
         generateFlat();
     }, [finalConcept]);
 
@@ -85,175 +83,198 @@ export const BlueprintLab: React.FC = () => {
     const isAnalyzing = state.agentStatus === AgentStatus.ANALYZING;
 
     return (
-        <div className="h-full bg-ide-bg flex flex-col overflow-hidden">
-            {/* Header */}
-            <div className="flex items-center justify-between p-6 border-b border-ide-border bg-ide-panel flex-shrink-0">
+        <div className="h-full flex flex-col bg-ide-bg text-ide-text overflow-hidden font-sans">
+            {/* --- Header Bar --- */}
+            <div className="h-16 border-b border-ide-border bg-ide-panel flex items-center justify-between px-6 flex-shrink-0 z-20 shadow-sm">
                 <div className="flex items-center gap-4">
-                    <div className="p-3 bg-green-500/10 rounded-full text-green-600">
-                        <Icons.Check size={24} />
+                    <div className="w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center border border-green-500/20 text-green-500">
+                        <Icons.Check size={20} />
                     </div>
                     <div>
-                        <h1 className="text-2xl font-bold text-ide-text">{finalConcept.name}</h1>
-                        <p className="text-ide-muted font-mono text-sm">
-                            STYLE: {techPack?.style_number || 'GEN-000'} | SEASON: {techPack?.season || 'SS25'}
-                        </p>
+                        <h1 className="text-xl font-bold tracking-tight text-ide-text flex items-center gap-3">
+                            {finalConcept.name}
+                        </h1>
+                        <div className="flex items-center gap-3 text-xs font-mono text-ide-muted mt-0.5">
+                            <span className="opacity-70">STYLE: {techPack?.style_number || 'GEN-000'}</span>
+                            <span className="w-px h-3 bg-ide-border"></span>
+                            <span className="opacity-70">SEASON: {techPack?.season || 'SS25 Resort'}</span>
+                        </div>
                     </div>
                 </div>
-                <div className="flex gap-2">
-                     <button className="px-4 py-2 bg-ide-accent hover:bg-ide-accent-hover text-white rounded text-sm font-bold flex items-center gap-2 shadow-sm">
-                        <Icons.Save size={16} /> Export Tech Pack (PDF)
-                    </button>
-                </div>
+                <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-xs font-bold flex items-center gap-2 transition shadow-md">
+                    <Icons.Download size={14} /> Export Tech Pack (PDF)
+                </button>
             </div>
 
-            {/* Content Grid */}
-            <div className="flex-1 overflow-hidden flex bg-dot-pattern">
+            {/* --- Main 3-Column Layout --- */}
+            <div className="flex-1 grid grid-cols-12 overflow-hidden bg-ide-bg">
                 
-                {/* 1. Spec Sheet (Left) */}
-                <div className="w-1/3 border-r border-ide-border overflow-y-auto p-6 bg-ide-panel/50 backdrop-blur-sm">
-                     <h3 className="text-xs font-bold text-ide-muted uppercase mb-4 flex items-center gap-2">
-                        <Icons.Scissors size={14}/> Construction Specifications
-                    </h3>
-
-                    {isAnalyzing && !techPack ? (
-                        <div className="space-y-4 animate-pulse">
-                            <div className="h-4 bg-ide-border rounded w-3/4"></div>
-                            <div className="h-4 bg-ide-border rounded w-1/2"></div>
-                            <div className="h-32 bg-ide-border rounded w-full"></div>
-                        </div>
-                    ) : (
-                        <div className="space-y-6">
-                            {/* Measurements Table */}
-                            <div className="bg-ide-bg border border-ide-border rounded overflow-hidden">
-                                <table className="w-full text-sm">
-                                    <thead className="bg-ide-panel border-b border-ide-border">
-                                        <tr>
-                                            <th className="p-2 text-left font-mono text-xs text-ide-muted">POM</th>
-                                            <th className="p-2 text-right font-mono text-xs text-ide-muted">Val ({techPack?.measurements[0]?.unit})</th>
-                                            <th className="p-2 text-right font-mono text-xs text-ide-muted">Tol +/-</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {techPack?.measurements.map((m, i) => (
-                                            <tr key={i} className="border-b border-ide-border last:border-0 hover:bg-ide-panel transition">
-                                                <td className="p-2 text-ide-text">{m.pom}</td>
-                                                <td className="p-2 text-right font-mono text-ide-accent">{m.value}</td>
-                                                <td className="p-2 text-right text-ide-muted text-xs">{m.tolerance}</td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-
-                            {/* Construction Notes */}
-                            <div className="bg-ide-panel p-4 rounded border border-ide-border shadow-sm">
-                                <h4 className="text-xs font-bold text-ide-text mb-2">Technologist Notes</h4>
-                                <ul className="list-disc list-inside space-y-1">
-                                    {techPack?.construction_details.map((note, i) => (
-                                        <li key={i} className="text-sm text-ide-muted">{note}</li>
-                                    ))}
-                                </ul>
-                            </div>
-                        </div>
-                    )}
-                </div>
-
-                {/* 2. Visuals (Center) */}
-                <div className="w-1/3 border-r border-ide-border overflow-y-auto p-6 flex flex-col gap-6">
-                     <h3 className="text-xs font-bold text-ide-muted uppercase flex items-center gap-2">
-                        <Icons.Layers size={14}/> Technical Drawings
-                    </h3>
+                {/* 1. LEFT PANEL: Specs (Scrollable) - span 3 */}
+                <div className="col-span-3 border-r border-ide-border flex flex-col overflow-hidden bg-ide-panel/30">
+                    <div className="p-3 border-b border-ide-border bg-ide-bg/50 backdrop-blur-sm sticky top-0 z-10">
+                        <h3 className="text-[10px] font-bold text-ide-muted uppercase tracking-wider flex items-center gap-2">
+                            <Icons.Scissors size={12}/> Construction Specifications
+                        </h3>
+                    </div>
                     
-                    <div className="relative aspect-[3/4] bg-white rounded border border-ide-border shadow-sm overflow-hidden group">
-                        {finalConcept.images.technical ? (
-                            <img src={finalConcept.images.technical.url} className="w-full h-full object-contain p-4" alt="Technical Flat" />
+                    <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
+                         {isAnalyzing && !techPack ? (
+                            <div className="space-y-4 animate-pulse">
+                                <div className="h-4 bg-ide-border rounded w-3/4"></div>
+                                <div className="h-64 bg-ide-border/50 rounded w-full"></div>
+                            </div>
                         ) : (
-                            <div className="w-full h-full flex flex-col items-center justify-center bg-gray-50">
-                                <Icons.Spinner className="animate-spin text-ide-accent mb-2" />
-                                <span className="text-xs text-gray-500">Drafting Schematics...</span>
+                            <div className="space-y-6">
+                                {/* Measurements Table */}
+                                <div className="border border-ide-border rounded-lg overflow-hidden bg-ide-panel">
+                                    <table className="w-full text-xs">
+                                        <thead className="bg-ide-bg border-b border-ide-border">
+                                            <tr>
+                                                <th className="p-2 text-left font-bold text-ide-muted pl-3">POM</th>
+                                                <th className="p-2 text-right font-mono text-ide-muted">Val ({techPack?.measurements[0]?.unit})</th>
+                                                <th className="p-2 text-right font-mono text-ide-muted pr-3">Tol +/-</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-ide-border/50">
+                                            {techPack?.measurements.map((m, i) => (
+                                                <tr key={i} className="hover:bg-ide-bg/50 transition-colors group">
+                                                    <td className="p-2 pl-3 font-medium text-ide-text group-hover:text-ide-accent transition-colors">{m.pom}</td>
+                                                    <td className="p-2 text-right font-mono text-ide-accent font-bold">{m.value}</td>
+                                                    <td className="p-2 pr-3 text-right text-ide-muted">{m.tolerance}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                {/* Technologist Notes */}
+                                <div className="bg-ide-panel border border-ide-border rounded-lg p-4 shadow-sm">
+                                    <h4 className="text-[10px] font-bold text-ide-muted uppercase mb-3 border-b border-ide-border pb-2">Technologist Notes</h4>
+                                    <ul className="space-y-2">
+                                        {techPack?.construction_details.map((note, i) => (
+                                            <li key={i} className="text-xs text-ide-text leading-relaxed flex items-start gap-2 opacity-90">
+                                                <span className="w-1 h-1 bg-ide-accent rounded-full mt-1.5 flex-shrink-0"></span>
+                                                {note}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
                             </div>
                         )}
-                        <div className="absolute bottom-2 right-2 bg-black/10 text-black px-2 py-1 text-[10px] rounded font-bold uppercase">Flat View</div>
-                    </div>
-
-                    <div className="relative aspect-[3/4] bg-ide-bg rounded border border-ide-border shadow-sm overflow-hidden opacity-80 hover:opacity-100 transition">
-                         <img src={finalConcept.images.hero?.url} className="w-full h-full object-cover" alt="Reference" />
-                         <div className="absolute bottom-2 right-2 bg-black/50 text-white px-2 py-1 text-[10px] rounded font-bold uppercase">Reference</div>
                     </div>
                 </div>
 
-                {/* 3. BOM & Sourcing (Right) */}
-                <div className="w-1/3 overflow-y-auto p-6 bg-ide-panel/50 backdrop-blur-sm">
-                    <h3 className="text-xs font-bold text-ide-muted uppercase mb-4 flex items-center gap-2">
-                        <Icons.Upload size={14} className="rotate-180"/> Material & Costing
-                    </h3>
+                {/* 2. CENTER PANEL: Visuals (Scrollable Canvas) - span 5 */}
+                <div className="col-span-5 border-r border-ide-border flex flex-col relative bg-[#111] overflow-hidden">
+                    <div className="p-3 border-b border-ide-border/30 bg-black/20 absolute top-0 w-full z-10 backdrop-blur-sm">
+                        <h3 className="text-[10px] font-bold text-ide-muted uppercase tracking-wider flex items-center gap-2">
+                            <Icons.Layers size={12}/> Technical Drawings
+                        </h3>
+                    </div>
 
-                    {isAnalyzing && !techPack ? (
-                        <div className="flex flex-col items-center justify-center h-32 text-ide-muted">
-                            <Icons.Spinner className="animate-spin mb-2"/>
-                            <span className="text-xs">Calculating Yields & Sourcing...</span>
+                    <div className="flex-1 overflow-y-auto p-8 space-y-8 bg-dot-pattern pt-16 custom-scrollbar">
+                        {/* Technical Flat */}
+                        <div className="relative w-full aspect-[4/3] bg-white rounded-sm shadow-2xl overflow-hidden group border border-white/10">
+                            {finalConcept.images.technical ? (
+                                <img src={finalConcept.images.technical.url} className="w-full h-full object-contain p-6" alt="Technical Flat" />
+                            ) : (
+                                <div className="w-full h-full flex flex-col items-center justify-center bg-gray-50">
+                                    <Icons.Spinner className="animate-spin text-gray-400 mb-2" />
+                                    <span className="text-xs text-gray-400">Generating Schematics...</span>
+                                </div>
+                            )}
+                            <div className="absolute bottom-3 right-3 bg-gray-100 text-gray-600 px-2 py-1 text-[9px] font-bold uppercase tracking-wider border border-gray-200 rounded-sm shadow-sm">
+                                Flat View
+                            </div>
                         </div>
-                    ) : (
-                        <div className="space-y-6">
-                            {/* BOM List */}
+
+                        {/* Hero Reference */}
+                        <div className="relative w-full aspect-[3/4] bg-ide-panel rounded-sm shadow-2xl overflow-hidden border border-ide-border opacity-90 hover:opacity-100 transition duration-500">
+                             <img src={finalConcept.images.hero?.url} className="w-full h-full object-cover" alt="Reference" />
+                             <div className="absolute bottom-3 right-3 bg-black/60 text-white px-2 py-1 text-[9px] font-bold uppercase tracking-wider backdrop-blur-md rounded-sm border border-white/10">
+                                Reference
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* 3. RIGHT PANEL: Material & Costing (Scrollable with Sticky Footer) - span 4 */}
+                <div className="col-span-4 flex flex-col overflow-hidden bg-ide-panel/30">
+                    <div className="p-3 border-b border-ide-border bg-ide-bg/50 backdrop-blur-sm sticky top-0 z-10">
+                        <h3 className="text-[10px] font-bold text-ide-muted uppercase tracking-wider flex items-center gap-2">
+                            <Icons.Upload size={12} className="rotate-180"/> Material & Costing
+                        </h3>
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
+                         {isAnalyzing && !techPack ? (
+                            <div className="flex flex-col items-center justify-center h-48 text-ide-muted space-y-3">
+                                <Icons.Spinner className="animate-spin text-ide-accent" size={24}/>
+                                <span className="text-xs font-mono">Calculating Yields & Sourcing...</span>
+                            </div>
+                        ) : (
                             <div className="space-y-3">
+                                {/* BOM Cards */}
                                 {techPack?.bom.map((item, i) => (
-                                    <div key={i} className="bg-ide-panel p-3 rounded border border-ide-border flex justify-between items-start shadow-sm hover:border-ide-accent transition group">
-                                        <div>
-                                            <span className="text-[10px] text-ide-accent uppercase font-bold tracking-wider">{item.location}</span>
-                                            <h4 className="text-sm font-bold text-ide-text">{item.item}</h4>
-                                            <p className="text-xs text-ide-muted mt-1">{item.description}</p>
+                                    <div key={i} className="bg-ide-panel border border-ide-border rounded p-3 hover:border-ide-accent/50 transition-all group shadow-sm">
+                                        <div className="flex justify-between items-start mb-1">
+                                            <span className="text-[9px] font-bold text-blue-400 uppercase tracking-widest">{item.location}</span>
                                         </div>
-                                        <div className="text-right">
-                                            <span className="block text-sm font-mono font-bold">{item.quantity}</span>
-                                            <span className="block text-xs text-ide-muted">Est. ${item.cost_estimate}</span>
+                                        <div className="flex justify-between items-start">
+                                            <div className="pr-4">
+                                                <h4 className="text-sm font-bold text-ide-text leading-tight">{item.item}</h4>
+                                                <p className="text-[11px] text-ide-muted mt-1 leading-snug">{item.description}</p>
+                                            </div>
+                                            <div className="text-right flex-shrink-0">
+                                                <span className="block text-xs font-mono font-bold text-ide-text">{item.quantity}</span>
+                                                <span className="block text-[10px] text-ide-muted mt-0.5">Est. ${item.cost_estimate}</span>
+                                            </div>
                                         </div>
                                     </div>
                                 ))}
-                            </div>
 
-                            {/* Total Cost */}
-                            <div className="bg-ide-bg p-4 rounded border border-ide-border flex justify-between items-center">
-                                <span className="text-sm font-bold text-ide-muted uppercase">Total Unit Cost</span>
-                                <span className="text-xl font-mono font-bold text-green-500">
-                                    ${techPack?.total_cost_estimate.toFixed(2)}
-                                </span>
-                            </div>
-
-                            {/* Sourcing Agent Results */}
-                            <div className="pt-6 border-t border-ide-border">
-                                <h3 className="text-xs font-bold text-ide-muted uppercase mb-4 flex items-center gap-2">
-                                    <Icons.Zoom size={14}/> Sourcing Agent (Live)
-                                </h3>
-                                
-                                {techPack?.sourcing_results && techPack.sourcing_results.length > 0 ? (
-                                    <div className="space-y-3">
-                                        {techPack.sourcing_results.map((res, i) => (
-                                            <a 
-                                                key={i} 
-                                                href={res.url} 
-                                                target="_blank" 
-                                                rel="noreferrer"
-                                                className="block p-3 bg-ide-bg hover:bg-ide-panel border border-ide-border hover:border-blue-400 rounded transition group"
-                                            >
-                                                <div className="flex items-start gap-3">
-                                                    <div className="mt-1 p-1 bg-blue-500/10 rounded text-blue-500">
-                                                        <Icons.Upload size={12} className="rotate-45" />
+                                {/* Sourcing Section */}
+                                <div className="pt-6 mt-6 border-t border-ide-border">
+                                    <h3 className="text-[10px] font-bold text-ide-muted uppercase mb-3 flex items-center gap-2">
+                                        <Icons.Zoom size={12}/> Verified Suppliers
+                                    </h3>
+                                    <div className="space-y-2">
+                                        {techPack?.sourcing_results && techPack.sourcing_results.length > 0 ? (
+                                            techPack.sourcing_results.map((res, i) => (
+                                                <a 
+                                                    key={i} 
+                                                    href={res.url} 
+                                                    target="_blank" 
+                                                    rel="noreferrer"
+                                                    className="flex items-center gap-3 p-2 rounded border border-transparent hover:bg-ide-panel hover:border-ide-border transition group"
+                                                >
+                                                    <div className="w-8 h-8 rounded bg-blue-500/10 flex items-center justify-center text-blue-500 flex-shrink-0 group-hover:bg-blue-500 group-hover:text-white transition-colors">
+                                                        <Icons.Upload size={14} className="rotate-45" />
                                                     </div>
-                                                    <div className="overflow-hidden">
-                                                        <h5 className="text-xs font-bold text-blue-400 truncate group-hover:underline">{res.title}</h5>
-                                                        <p className="text-[10px] text-ide-muted mt-1 truncate">{res.url}</p>
+                                                    <div className="flex-1 min-w-0">
+                                                        <h5 className="text-xs font-bold text-ide-text truncate group-hover:text-blue-400 transition-colors">{res.title}</h5>
+                                                        <p className="text-[10px] text-ide-muted truncate opacity-60">{res.url}</p>
                                                     </div>
-                                                </div>
-                                            </a>
-                                        ))}
+                                                </a>
+                                            ))
+                                        ) : (
+                                            <p className="text-[10px] text-ide-muted italic pl-1">Searching global supplier database...</p>
+                                        )}
                                     </div>
-                                ) : (
-                                    <p className="text-xs text-ide-muted italic p-2">Searching global suppliers...</p>
-                                )}
+                                </div>
                             </div>
+                        )}
+                    </div>
+
+                    {/* Total Cost Footer */}
+                    <div className="p-4 border-t border-ide-border bg-ide-panel z-10 shadow-[0_-5px_15px_rgba(0,0,0,0.1)]">
+                        <div className="flex justify-between items-center">
+                            <span className="text-xs font-bold text-ide-muted uppercase tracking-wider">Total Unit Cost</span>
+                            <span className="text-xl font-mono font-bold text-green-500">
+                                ${techPack?.total_cost_estimate.toFixed(2)}
+                            </span>
                         </div>
-                    )}
+                    </div>
                 </div>
             </div>
         </div>
