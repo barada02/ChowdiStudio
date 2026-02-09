@@ -229,7 +229,7 @@ ${assetManifest || "No assets uploaded."}
 
     /**
      * GENERATION STEP 2: Fashion Illustration (Artistic Mood Sketch)
-     * Takes the Hero Image and converts it into a hand-drawn fashion illustration.
+     * Takes the Hero Image and converts it into a dual-view (Front/Back) Fashion Croquis.
      */
     async generateFashionIllustration(heroImageBase64: string): Promise<string> {
         if (!getApiKey()) return "https://picsum.photos/800/600"; 
@@ -238,11 +238,15 @@ ${assetManifest || "No assets uploaded."}
             const base64Data = heroImageBase64.split(',')[1];
             
             const sketchPrompt = `
-                Create a high-end Fashion Illustration of this design.
-                Style: Mixed media fashion sketch, watercolor and ink on textured paper.
-                Composition: Show the outfit clearly with artistic shading, highlights, and movement.
-                Vibe: Painterly, expressive, elegant, like a designer's mood sketch.
-                Background: Neutral vintage paper or subtle wash.
+                Create a professional Fashion Design Sketch showing TWO views side-by-side:
+                1. Front View (Walking pose)
+                2. Back View (Standing pose, showing rear details)
+                
+                Style: High-fashion croquis illustration.
+                Medium: Copic markers, watercolor wash, and fine ink outlines.
+                Proportions: Elongated 9-head fashion figure (stylized long legs, small head).
+                Execution: Informative but artistic. Show drape, seam lines, and texture clearly.
+                Background: Cream colored textured art paper. Isolate the figures. Remove all photorealistic scenery.
             `;
 
             const response = await this.ai.models.generateContent({
