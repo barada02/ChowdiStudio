@@ -64,13 +64,9 @@
       /* Dot Pattern for Canvas */
       .bg-dot-pattern {
         background-color: var(--ide-bg);
-        background-image: radial-gradient(var(--ide-muted) 1px, transparent 1px);
+        /* Use ide-border for dots so they are subtle but visible, without needing opacity on container */
+        background-image: radial-gradient(var(--ide-border) 1px, transparent 1px);
         background-size: 24px 24px;
-        opacity: 1;
-      }
-      /* Reduce dot opacity slightly via mask or rgba in prod, but simple here */
-      .dot-dimmed {
-        opacity: 0.3;
       }
 
       /* Custom Scrollbar */

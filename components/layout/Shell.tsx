@@ -122,7 +122,7 @@ export const Shell: React.FC = () => {
                         </div>
 
                         {/* Center Stage (Canvas) */}
-                        <div className="flex-1 relative bg-dot-pattern dot-dimmed overflow-hidden flex flex-col">
+                        <div className="flex-1 relative bg-dot-pattern overflow-hidden flex flex-col">
                             {/* The GenerationBoard acts as the canvas */}
                             <GenerationBoard />
                             {state.focusedImageId && <FocusEditor />}
