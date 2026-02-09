@@ -9,7 +9,6 @@ export const GenerationBoard: React.FC = () => {
     const handleSelect = (id: string | null) => {
         // If clicking existing active, or explicitly setting null
         if (state.activeConceptId === id) {
-            // Deselect if already active? Optional. Let's keep it active unless they explicitly back out.
             return;
         }
         dispatch({ type: 'SELECT_CONCEPT', payload: id || '' });
@@ -21,16 +20,6 @@ export const GenerationBoard: React.FC = () => {
 
     const handleBackToGrid = (e: React.MouseEvent) => {
         e.stopPropagation();
-        // We need a way to deselect. We can't pass null to SELECT_CONCEPT based on current types
-        // Ideally we update action type, but for now we can just leave it or dispatch a new concept ID.
-        // Wait, SELECT_CONCEPT takes string. Let's make it nullable in types or add a DESELECT action.
-        // For now, let's use a workaround or update types. 
-        // Better: Just assume we can switch to another concept. 
-        // Actually, to "close" the view, we can't easily set activeConceptId to null without type change.
-        // Let's assume we implement a "back" button that just clears the active selection conceptually,
-        // but since type is string, we might need to send an empty string or handle it in reducer.
-        // Let's check Reducer: case 'SELECT_CONCEPT': return { ...state, activeConceptId: action.payload };
-        // We will pass empty string to deselect.
         dispatch({ type: 'SELECT_CONCEPT', payload: '' }); 
     };
 
@@ -59,11 +48,13 @@ export const GenerationBoard: React.FC = () => {
                     <div className="flex items-center gap-3">
                         <button 
                             onClick={handleBackToGrid}
-                            className="p-2 rounded hover:bg-ide-border text-ide-muted hover:text-ide-text transition"
+                            className="flex items-center gap-2 px-3 py-1.5 rounded hover:bg-ide-bg text-ide-muted hover:text-ide-text transition border border-transparent hover:border-ide-border group"
                             title="Back to Grid"
                         >
-                            <Icons.Layers size={18} />
+                            <Icons.ArrowLeft size={16} className="group-hover:-translate-x-0.5 transition-transform"/>
+                            <span className="text-xs font-medium uppercase tracking-wide">Back</span>
                         </button>
+                        <div className="h-6 w-px bg-ide-border mx-2"></div>
                         <div>
                             <h2 className="text-sm font-bold text-ide-text uppercase tracking-wider flex items-center gap-2">
                                 {activeConcept.name}

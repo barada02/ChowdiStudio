@@ -14,7 +14,8 @@ import {
     Download,
     Sun,
     Moon,
-    GripVertical
+    GripVertical,
+    ArrowLeft
 } from 'lucide-react';
 
 export const Icons = {
@@ -34,5 +35,6 @@ export const Icons = {
     Save: Download,
     Sun: Sun,
     Moon: Moon,
-    Drag: GripVertical
+    Drag: GripVertical,
+    ArrowLeft: ArrowLeft
 };
