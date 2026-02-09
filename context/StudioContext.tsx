@@ -1,7 +1,8 @@
-import React, { createContext, useContext, useReducer, ReactNode } from 'react';
+import React, { createContext, useContext, useReducer, ReactNode, useEffect } from 'react';
 import { AppState, Action, AppTab, AgentStatus, DesignConcept, ViewType } from '../types';
 
 const initialState: AppState = {
+    theme: 'dark', // Default
     currentTab: AppTab.STUDIO,
     agentStatus: AgentStatus.IDLE,
     inspirationBoard: [],
@@ -18,6 +19,8 @@ const initialState: AppState = {
 
 const reducer = (state: AppState, action: Action): AppState => {
     switch (action.type) {
+        case 'TOGGLE_THEME':
+            return { ...state, theme: state.theme === 'dark' ? 'light' : 'dark' };
         case 'SET_TAB':
             return { ...state, currentTab: action.payload };
         case 'ADD_INSPIRATION':
@@ -50,7 +53,6 @@ const reducer = (state: AppState, action: Action): AppState => {
                 })
             };
         case 'FINALIZE_CONCEPT':
-            // Logic to move to blueprint tab could go here
             return { ...state, currentTab: AppTab.BLUEPRINT };
         case 'SET_FOCUSED_IMAGE':
             return { ...state, focusedImageId: action.payload };
@@ -63,6 +65,14 @@ const StudioContext = createContext<{ state: AppState; dispatch: React.Dispatch<
 
 export const StudioProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [state, dispatch] = useReducer(reducer, initialState);
+
+    // Effect to apply theme class to html element
+    useEffect(() => {
+        const root = window.document.documentElement;
+        root.classList.remove('light', 'dark');
+        root.classList.add(state.theme);
+    }, [state.theme]);
+
     return (
         <StudioContext.Provider value={{ state, dispatch }}>
             {children}

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -11,13 +11,15 @@
         theme: {
           extend: {
             colors: {
-              studio: {
-                900: '#1e1e1e', // VS Code Dark
-                800: '#252526', // Panel Header
-                700: '#333333', // Border
-                600: '#3c3c3c', // Hover
-                accent: '#007acc', // VS Code Blue
-                text: '#cccccc'
+              // Semantic tokens that adapt to themes
+              ide: {
+                bg: 'var(--ide-bg)',
+                panel: 'var(--ide-panel)',
+                border: 'var(--ide-border)',
+                text: 'var(--ide-text)',
+                muted: 'var(--ide-muted)',
+                accent: 'var(--ide-accent)',
+                'accent-hover': 'var(--ide-accent-hover)',
               }
             },
             fontFamily: {
@@ -30,26 +32,61 @@
     </script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
     <style>
+      :root {
+        /* Light Mode Defaults */
+        --ide-bg: #f3f4f6;       /* Gray 100 */
+        --ide-panel: #ffffff;    /* White */
+        --ide-border: #e5e7eb;   /* Gray 200 */
+        --ide-text: #1f2937;     /* Gray 800 */
+        --ide-muted: #6b7280;    /* Gray 500 */
+        --ide-accent: #2563eb;   /* Blue 600 */
+        --ide-accent-hover: #1d4ed8;
+      }
+
+      .dark {
+        /* Dark Mode Defaults */
+        --ide-bg: #171717;       /* Neutral 900 */
+        --ide-panel: #262626;    /* Neutral 800 */
+        --ide-border: #404040;   /* Neutral 700 */
+        --ide-text: #e5e5e5;     /* Neutral 200 */
+        --ide-muted: #a3a3a3;    /* Neutral 400 */
+        --ide-accent: #3b82f6;   /* Blue 500 */
+        --ide-accent-hover: #2563eb;
+      }
+
       body {
         font-family: 'Inter', sans-serif;
-        background-color: #1e1e1e;
-        color: #cccccc;
+        background-color: var(--ide-bg);
+        color: var(--ide-text);
         overflow: hidden;
       }
+
+      /* Dot Pattern for Canvas */
+      .bg-dot-pattern {
+        background-color: var(--ide-bg);
+        background-image: radial-gradient(var(--ide-muted) 1px, transparent 1px);
+        background-size: 24px 24px;
+        opacity: 1;
+      }
+      /* Reduce dot opacity slightly via mask or rgba in prod, but simple here */
+      .dot-dimmed {
+        opacity: 0.3;
+      }
+
       /* Custom Scrollbar */
       ::-webkit-scrollbar {
-        width: 10px;
-        height: 10px;
+        width: 8px;
+        height: 8px;
       }
       ::-webkit-scrollbar-track {
-        background: #1e1e1e;
+        background: transparent;
       }
       ::-webkit-scrollbar-thumb {
-        background: #424242;
-        border-radius: 5px;
+        background: var(--ide-border);
+        border-radius: 4px;
       }
       ::-webkit-scrollbar-thumb:hover {
-        background: #4f4f4f;
+        background: var(--ide-muted);
       }
     </style>
   <script type="importmap">

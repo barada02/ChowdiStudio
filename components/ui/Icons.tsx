@@ -11,12 +11,16 @@ import {
     ZoomIn,
     Layers,
     Scissors,
-    Download
+    Download,
+    Sun,
+    Moon,
+    GripVertical
 } from 'lucide-react';
 
 export const Icons = {
     Studio: LayoutTemplate,
     Blueprint: Layers,
+    Layers: Layers,
     Image: ImageIcon,
     Chat: MessageSquare,
     Send: Send,
@@ -26,5 +30,9 @@ export const Icons = {
     Upload: Upload,
     Zoom: ZoomIn,
     Cut: Scissors,
-    Save: Download
+    Scissors: Scissors,
+    Save: Download,
+    Sun: Sun,
+    Moon: Moon,
+    Drag: GripVertical
 };

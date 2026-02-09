@@ -53,6 +53,7 @@ export enum AgentStatus {
 }
 
 export interface AppState {
+    theme: 'light' | 'dark';
     currentTab: AppTab;
     agentStatus: AgentStatus;
     inspirationBoard: InspirationAsset[];
@@ -63,6 +64,7 @@ export interface AppState {
 }
 
 export type Action =
+    | { type: 'TOGGLE_THEME' }
     | { type: 'SET_TAB'; payload: AppTab }
     | { type: 'ADD_INSPIRATION'; payload: InspirationAsset }
     | { type: 'SET_AGENT_STATUS'; payload: AgentStatus }
