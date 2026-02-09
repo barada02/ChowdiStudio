@@ -24,7 +24,10 @@ import {
     ChevronRight,
     ChevronLeft,
     PanelRightClose,
-    PanelRightOpen
+    PanelRightOpen,
+    Eraser,
+    Brush,
+    Maximize2
 } from 'lucide-react';
 
 export const Icons = {
@@ -56,5 +59,8 @@ export const Icons = {
     ChevronRight: ChevronRight,
     ChevronLeft: ChevronLeft,
     PanelClose: PanelRightClose,
-    PanelOpen: PanelRightOpen
+    PanelOpen: PanelRightOpen,
+    Eraser: Eraser,
+    Brush: Brush,
+    Maximize: Maximize2
 };

@@ -25,7 +25,8 @@ export const GenerationBoard: React.FC = () => {
         dispatch({ type: 'SELECT_CONCEPT', payload: '' }); 
     };
 
-    const downloadImage = (url: string, name: string) => {
+    const downloadImage = (e: React.MouseEvent, url: string, name: string) => {
+        e.stopPropagation(); // Prevent opening focus view when clicking download
         const link = document.createElement('a');
         link.href = url;
         link.download = name;
@@ -96,9 +97,12 @@ export const GenerationBoard: React.FC = () => {
                     {/* Visuals (Takes max space) */}
                     <div className="flex-1 p-6 overflow-y-auto flex items-center justify-center gap-8 bg-ide-bg transition-all duration-300">
                         
-                        {/* 1. Hero View (Realistic) - Editable */}
-                        <div className={`relative group h-full max-h-[85vh] aspect-[3/4] bg-ide-panel rounded-lg shadow-2xl border border-ide-border overflow-hidden transition-all duration-300 ${isSidebarOpen ? '' : 'scale-105'}`}>
-                             <div className="absolute top-0 left-0 right-0 p-3 bg-gradient-to-b from-black/50 to-transparent z-10 flex justify-between items-start">
+                        {/* 1. Hero View (Realistic) - Click to Focus/Edit */}
+                        <div 
+                            className={`relative group h-full max-h-[85vh] aspect-[3/4] bg-ide-panel rounded-lg shadow-2xl border border-ide-border overflow-hidden transition-all duration-300 cursor-zoom-in ${isSidebarOpen ? '' : 'scale-105'}`}
+                            onClick={() => activeConcept.images.hero && handleFocus(activeConcept.images.hero.id)}
+                        >
+                             <div className="absolute top-0 left-0 right-0 p-3 bg-gradient-to-b from-black/50 to-transparent z-10 flex justify-between items-start pointer-events-none">
                                 <span className="text-white text-xs font-bold uppercase tracking-widest flex items-center gap-2">
                                     <Icons.Camera size={14}/> Lookbook (Hero)
                                 </span>
@@ -108,28 +112,25 @@ export const GenerationBoard: React.FC = () => {
                                     <img src={activeConcept.images.hero.url} className="w-full h-full object-cover" alt="Hero" />
                                     {/* Download Button */}
                                     <button 
-                                        onClick={() => downloadImage(activeConcept.images.hero!.url, `${activeConcept.name}-Hero.png`)}
-                                        className="absolute top-3 right-3 p-2 bg-black/40 hover:bg-black/70 text-white rounded opacity-0 group-hover:opacity-100 transition backdrop-blur-md z-20"
+                                        onClick={(e) => downloadImage(e, activeConcept.images.hero!.url, `${activeConcept.name}-Hero.png`)}
+                                        className="absolute top-3 right-3 p-2 bg-black/40 hover:bg-black/70 text-white rounded opacity-0 group-hover:opacity-100 transition backdrop-blur-md z-20 pointer-events-auto"
                                         title="Download Image"
                                     >
                                         <Icons.Download size={16} />
                                     </button>
+                                    
+                                    {/* Hover hint overlay */}
+                                    <div className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                                        <div className="bg-black/60 text-white px-3 py-1.5 rounded-full flex items-center gap-2 backdrop-blur-md border border-white/10">
+                                            <Icons.Maximize size={14} />
+                                            <span className="text-xs font-bold">Click to Edit & View</span>
+                                        </div>
+                                    </div>
                                 </>
                             ) : (
                                 <div className="w-full h-full flex items-center justify-center">
                                     <Icons.Spinner className="animate-spin text-ide-muted" />
                                 </div>
-                            )}
-                            
-                            {/* Edit Button for Hero */}
-                            {activeConcept.images.hero && (
-                                <button 
-                                    onClick={() => handleFocus(activeConcept.images.hero!.id)}
-                                    className="absolute bottom-6 right-6 p-4 bg-ide-accent text-white rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition transform scale-90 group-hover:scale-100 hover:bg-blue-600 z-20"
-                                    title="Edit Design"
-                                >
-                                    <Icons.Edit size={20} />
-                                </button>
                             )}
                         </div>
 
@@ -145,7 +146,7 @@ export const GenerationBoard: React.FC = () => {
                                     <img src={activeConcept.images.illustration.url} className="w-full h-full object-cover" alt="Fashion Illustration" />
                                      {/* Download Button */}
                                      <button 
-                                        onClick={() => downloadImage(activeConcept.images.illustration!.url, `${activeConcept.name}-Sketch.png`)}
+                                        onClick={(e) => downloadImage(e, activeConcept.images.illustration!.url, `${activeConcept.name}-Sketch.png`)}
                                         className="absolute top-3 right-3 p-2 bg-gray-200/50 hover:bg-gray-200 text-black rounded opacity-0 group-hover:opacity-100 transition backdrop-blur-md z-20"
                                         title="Download Sketch"
                                     >
