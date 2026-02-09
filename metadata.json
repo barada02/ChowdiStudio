@@ -1,0 +1,8 @@
+{
+  "name": "ChowdiStudio",
+  "description": "A multimodal AI fashion design studio powering co-creation with Gemini 3 agents.",
+  "requestFramePermissions": [
+    "microphone",
+    "camera"
+  ]
+}
