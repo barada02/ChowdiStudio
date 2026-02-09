@@ -28,7 +28,9 @@ import {
     Eraser,
     Brush,
     Maximize2,
-    Hand
+    Hand,
+    Calculator,
+    ChartPie
 } from 'lucide-react';
 
 export const Icons = {
@@ -64,5 +66,7 @@ export const Icons = {
     Eraser: Eraser,
     Brush: Brush,
     Maximize: Maximize2,
-    Hand: Hand
+    Hand: Hand,
+    Calculator: Calculator,
+    Chart: ChartPie
 };

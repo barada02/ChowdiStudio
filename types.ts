@@ -1,3 +1,4 @@
+
 // Domain Types
 
 export enum ViewType {
@@ -46,6 +47,11 @@ export interface TechPack {
     sourcing_results?: SourcingResult[];
     total_cost_estimate: number;
     currency: string;
+    // New fields for Code Execution Analysis
+    analysis?: {
+        fabric_yield_text: string;
+        cost_chart_url: string; // Base64 image of the matplotlib plot
+    };
 }
 
 export interface DesignConcept {

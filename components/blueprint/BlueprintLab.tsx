@@ -1,9 +1,10 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { jsPDF } from 'jspdf';
 import { useStudio } from '../../context/StudioContext';
 import { geminiService } from '../../services/geminiService';
 import { AppTab, ViewType, AgentStatus } from '../../types';
 import { Icons } from '../ui/Icons';
+import ReactMarkdown from 'react-markdown';
 
 // Helper to get natural dimensions of an image URL (Base64)
 const getImageDimensions = (src: string): Promise<{ width: number; height: number }> => {
@@ -17,6 +18,7 @@ const getImageDimensions = (src: string): Promise<{ width: number; height: numbe
 
 export const BlueprintLab: React.FC = () => {
     const { state, dispatch } = useStudio();
+    const [calculating, setCalculating] = useState(false);
 
     // Find finalized concept (concept active when finalized)
     const finalConcept = state.activeConceptId 
@@ -73,7 +75,27 @@ export const BlueprintLab: React.FC = () => {
         generateData();
     }, [finalConcept, state.agentStatus]);
 
-    // --- 3. Export PDF Function (Magazine Style Engine) ---
+    // --- 3. Run Deep Analysis (Code Execution) ---
+    const handleDeepAnalysis = async () => {
+        if (!finalConcept || !finalConcept.techPack) return;
+        
+        setCalculating(true);
+        const { yieldText, chartUrl } = await geminiService.runDeepCostAnalysis(finalConcept.techPack);
+        
+        // Update TechPack with new analysis data
+        const updatedTechPack = {
+            ...finalConcept.techPack,
+            analysis: {
+                fabric_yield_text: yieldText,
+                cost_chart_url: chartUrl
+            }
+        };
+
+        dispatch({ type: 'UPDATE_TECH_PACK', payload: { conceptId: finalConcept.id, techPack: updatedTechPack } });
+        setCalculating(false);
+    };
+
+    // --- 4. Export PDF Function (Magazine Style Engine) ---
     const handleExportPdf = async () => {
         if (!finalConcept || !finalConcept.techPack) return;
         const { techPack } = finalConcept;
@@ -256,6 +278,12 @@ export const BlueprintLab: React.FC = () => {
             yPos += 28;
         });
 
+        // Chart if exists
+        if (techPack.analysis?.cost_chart_url) {
+             const chartH = await drawImageFit(techPack.analysis.cost_chart_url, yPos, 80);
+             yPos += chartH + 10;
+        }
+
         // Total Cost Footer
         yPos += 10;
         doc.setDrawColor(0);
@@ -415,7 +443,7 @@ export const BlueprintLab: React.FC = () => {
                 <div className="col-span-4 flex flex-col overflow-hidden bg-ide-panel/30">
                     <div className="p-3 border-b border-ide-border bg-ide-bg/50 backdrop-blur-sm sticky top-0 z-10">
                         <h3 className="text-[10px] font-bold text-ide-muted uppercase tracking-wider flex items-center gap-2">
-                            <Icons.Upload size={12} className="rotate-180"/> Material & Costing
+                            <Icons.Calculator size={12}/> Material & Costing
                         </h3>
                     </div>
 
@@ -427,6 +455,41 @@ export const BlueprintLab: React.FC = () => {
                             </div>
                         ) : (
                             <div className="space-y-3">
+                                {/* Code Execution Analysis Section */}
+                                <div className="bg-ide-panel border border-ide-border rounded-lg p-3 shadow-md mb-4">
+                                     <div className="flex justify-between items-center mb-2">
+                                        <h4 className="text-[10px] font-bold text-ide-accent uppercase flex items-center gap-2">
+                                            <Icons.Chart size={12} /> Deep Cost Analysis
+                                        </h4>
+                                        <button 
+                                            onClick={handleDeepAnalysis}
+                                            disabled={calculating}
+                                            className="text-[10px] bg-ide-bg border border-ide-border px-2 py-1 rounded hover:text-ide-text hover:border-ide-accent transition disabled:opacity-50"
+                                        >
+                                            {calculating ? 'Processing...' : 'Run Python Agent'}
+                                        </button>
+                                     </div>
+                                     
+                                     {techPack?.analysis ? (
+                                         <div className="space-y-3 animate-in fade-in slide-in-from-bottom-2">
+                                            {techPack.analysis.cost_chart_url && (
+                                                <div className="rounded overflow-hidden border border-ide-border bg-white p-2">
+                                                    <img src={techPack.analysis.cost_chart_url} alt="Cost Chart" className="w-full h-auto" />
+                                                </div>
+                                            )}
+                                            {techPack.analysis.fabric_yield_text && (
+                                                <div className="bg-ide-bg p-2 rounded border border-ide-border text-xs text-ide-text font-mono overflow-x-auto whitespace-pre-wrap">
+                                                     <ReactMarkdown>{techPack.analysis.fabric_yield_text}</ReactMarkdown>
+                                                </div>
+                                            )}
+                                         </div>
+                                     ) : (
+                                         <p className="text-[10px] text-ide-muted italic">
+                                             {calculating ? "Agent is writing Python code to calculate precise yields..." : "Run analysis to calculate fabric yields and generate cost charts using Python."}
+                                         </p>
+                                     )}
+                                </div>
+
                                 {/* BOM Cards */}
                                 {techPack?.bom.map((item, i) => (
                                     <div key={i} className="bg-ide-panel border border-ide-border rounded p-3 hover:border-ide-accent/50 transition-all group shadow-sm">

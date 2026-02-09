@@ -397,6 +397,70 @@ ${assetManifest || "No assets uploaded."}
     }
 
     /**
+     * CODE EXECUTION: DEEP COST & YIELD ANALYSIS
+     * Uses Gemini to write and run Python code to calculate precise yields and generate charts.
+     */
+    async runDeepCostAnalysis(techPack: TechPack): Promise<{yieldText: string, chartUrl: string}> {
+        if (!getApiKey()) return { yieldText: "API Key Required", chartUrl: "" };
+
+        try {
+            // Context for the Python Agent
+            const bomContext = techPack.bom.map(i => `${i.item} (${i.description}): ${i.quantity} @ $${i.cost_estimate}`).join('; ');
+            const prompt = `
+                I have a fashion tech pack with the following BOM: ${bomContext}.
+                Total Est Cost: ${techPack.total_cost_estimate}.
+                
+                TASK 1: Write a Python script to calculate the Total Fabric Yield for 100 units.
+                Assume standard 58" fabric width. Calculate efficiency with 15% wastage.
+                Print the result clearly.
+
+                TASK 2: In the same script, use 'matplotlib' to generate a Pie Chart for the Cost Breakdown.
+                Categories: Fabric, Trims, Labor (Assume labor is 40% of total if not specified), Overhead.
+                Save the chart.
+            `;
+
+            const response = await this.ai.models.generateContent({
+                model: MODELS.REASONING, // Reasoning model handles code execution best
+                contents: { parts: [{ text: prompt }] },
+                config: {
+                    tools: [{ codeExecution: {} }]
+                }
+            });
+
+            let yieldText = "";
+            let chartUrl = "";
+
+            // Parse Response for Text output and Image artifacts
+            const parts = response.candidates?.[0]?.content?.parts;
+            if (parts) {
+                for (const part of parts) {
+                    // 1. Text Output (Yield Calculation)
+                    if (part.text) {
+                        yieldText += part.text;
+                    }
+                    
+                    // 2. Image Output (Matplotlib Chart)
+                    // Code execution results often return inlineData with mimeType 'image/png'
+                    if (part.inlineData && part.inlineData.mimeType === 'image/png') {
+                        chartUrl = `data:image/png;base64,${part.inlineData.data}`;
+                    }
+                    
+                    // Sometimes it comes in executableCodeResult (less common in simple API, but good to check)
+                     if ((part as any).executableCodeResult?.outcome === 'OUTCOME_OK') {
+                        // The text output might be here in some versions, but usually it's in a separate text part
+                    }
+                }
+            }
+
+            return { yieldText, chartUrl };
+
+        } catch (error) {
+            console.error("Deep Analysis Error:", error);
+            return { yieldText: "Failed to execute analysis logic.", chartUrl: "" };
+        }
+    }
+
+    /**
      * SOURCING AGENT
      * Finds real world suppliers for fabrics using Google Search Grounding.
      */
