@@ -13,6 +13,41 @@ export interface DesignImage {
     conceptId: string;
 }
 
+export interface BOMItem {
+    id: string;
+    location: string; // e.g., "Body", "Lining", "Trims"
+    item: string; // e.g., "Silk Crepe", "YKK Zipper"
+    description: string;
+    quantity: string; // e.g. "2.5 m"
+    cost_estimate: number;
+}
+
+export interface Measurement {
+    pom: string; // Point of Measure, e.g., "HPS to Hem"
+    value: number;
+    unit: 'cm' | 'in';
+    tolerance: number;
+}
+
+export interface SourcingResult {
+    query: string;
+    title: string;
+    url: string;
+    snippet?: string;
+}
+
+export interface TechPack {
+    style_number: string;
+    season: string;
+    fabrication_notes: string[];
+    construction_details: string[];
+    bom: BOMItem[];
+    measurements: Measurement[];
+    sourcing_results?: SourcingResult[];
+    total_cost_estimate: number;
+    currency: string;
+}
+
 export interface DesignConcept {
     id: string;
     name: string;
@@ -22,6 +57,7 @@ export interface DesignConcept {
         illustration?: DesignImage;
         technical?: DesignImage;
     };
+    techPack?: TechPack;
     isFinalized: boolean;
 }
 
@@ -63,7 +99,8 @@ export enum AgentStatus {
     THINKING = 'THINKING',
     GENERATING = 'GENERATING',
     EDITING = 'EDITING',
-    PRODUCING = 'PRODUCING' // New status for video generation
+    PRODUCING = 'PRODUCING',
+    ANALYZING = 'ANALYZING' // New status for Tech Pack generation
 }
 
 export interface AppState {
@@ -88,6 +125,8 @@ export type Action =
     | { type: 'ADD_MESSAGE'; payload: ChatMessage }
     | { type: 'SET_CONCEPTS'; payload: DesignConcept[] }
     | { type: 'UPDATE_CONCEPT_IMAGE'; payload: { conceptId: string; imageId: string; view: ViewType; url: string } }
+    | { type: 'UPDATE_TECH_PACK'; payload: { conceptId: string; techPack: TechPack } }
+    | { type: 'ADD_SOURCING_RESULTS'; payload: { conceptId: string; results: SourcingResult[] } }
     | { type: 'SELECT_CONCEPT'; payload: string }
     | { type: 'FINALIZE_CONCEPT'; payload: string }
     | { type: 'SET_FOCUSED_IMAGE'; payload: string | null }

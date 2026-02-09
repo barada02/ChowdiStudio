@@ -1,6 +1,6 @@
-import { GoogleGenAI, Type, FunctionDeclaration } from "@google/genai";
+import { GoogleGenAI, Type, FunctionDeclaration, Schema } from "@google/genai";
 import { MODELS, SYSTEM_INSTRUCTIONS } from "../constants";
-import { ChatMessage, InspirationAsset, ViewType } from "../types";
+import { ChatMessage, InspirationAsset, TechPack, SourcingResult } from "../types";
 
 // Helper to get API Key safely
 const getApiKey = (): string => {
@@ -307,6 +307,122 @@ ${assetManifest || "No assets uploaded."}
         } catch (error) {
             console.error("Technical Gen Error:", error);
             return heroImageBase64;
+        }
+    }
+
+    /**
+     * GENERATES TECH PACK DATA (JSON)
+     * Analyzes the images to produce specifications, BOM, and measurements.
+     */
+    async generateTechPack(heroUrl: string): Promise<TechPack> {
+        if (!getApiKey()) throw new Error("API Key missing");
+
+        try {
+             const base64Data = heroUrl.split(',')[1];
+
+             const schema: Schema = {
+                type: Type.OBJECT,
+                properties: {
+                    style_number: { type: Type.STRING },
+                    season: { type: Type.STRING },
+                    currency: { type: Type.STRING },
+                    fabrication_notes: { type: Type.ARRAY, items: { type: Type.STRING } },
+                    construction_details: { type: Type.ARRAY, items: { type: Type.STRING } },
+                    total_cost_estimate: { type: Type.NUMBER },
+                    bom: {
+                        type: Type.ARRAY,
+                        items: {
+                            type: Type.OBJECT,
+                            properties: {
+                                location: { type: Type.STRING },
+                                item: { type: Type.STRING },
+                                description: { type: Type.STRING },
+                                quantity: { type: Type.STRING },
+                                cost_estimate: { type: Type.NUMBER }
+                            }
+                        }
+                    },
+                    measurements: {
+                        type: Type.ARRAY,
+                        items: {
+                            type: Type.OBJECT,
+                            properties: {
+                                pom: { type: Type.STRING },
+                                value: { type: Type.NUMBER },
+                                unit: { type: Type.STRING },
+                                tolerance: { type: Type.NUMBER }
+                            }
+                        }
+                    }
+                },
+                required: ['style_number', 'bom', 'measurements']
+            };
+
+            const response = await this.ai.models.generateContent({
+                model: MODELS.REASONING, // Gemini 3 Pro
+                contents: {
+                    parts: [
+                        { inlineData: { mimeType: 'image/png', data: base64Data } },
+                        { text: "Analyze this fashion design and generate a complete Technical Pack JSON. Act as a senior garment technologist. Estimate realistic measurements for a sample size M." }
+                    ]
+                },
+                config: {
+                    responseMimeType: 'application/json',
+                    responseSchema: schema
+                }
+            });
+
+            if (response.text) {
+                return JSON.parse(response.text) as TechPack;
+            }
+            throw new Error("Failed to generate Tech Pack JSON");
+
+        } catch (error) {
+            console.error("TechPack Gen Error:", error);
+            throw error;
+        }
+    }
+
+    /**
+     * SOURCING AGENT
+     * Finds real world suppliers for fabrics using Google Search Grounding.
+     */
+    async searchSuppliers(query: string): Promise<SourcingResult[]> {
+        if (!getApiKey()) return [];
+
+        try {
+            const response = await this.ai.models.generateContent({
+                model: MODELS.REASONING, // Gemini 3 Pro supports tools
+                contents: {
+                    parts: [{ text: `Find wholesale fabric suppliers for: ${query}. Return a list of specific products found.` }]
+                },
+                config: {
+                    tools: [{ googleSearch: {} }]
+                }
+            });
+
+            const results: SourcingResult[] = [];
+            
+            // Extract from Grounding Chunks
+            const chunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
+            if (chunks) {
+                chunks.forEach(chunk => {
+                    if (chunk.web?.uri && chunk.web?.title) {
+                        results.push({
+                            query: query,
+                            title: chunk.web.title,
+                            url: chunk.web.uri,
+                            snippet: '' // Grounding chunks might not have snippets in this exact structure
+                        });
+                    }
+                });
+            }
+
+            return results.slice(0, 5); // Limit to top 5
+
+        } catch (error) {
+            console.error("Sourcing Error:", error);
+            return [];
         }
     }
 

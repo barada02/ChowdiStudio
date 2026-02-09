@@ -69,6 +69,34 @@ const reducer = (state: AppState, action: Action): AppState => {
                     return c;
                 })
             };
+        case 'UPDATE_TECH_PACK':
+            return {
+                ...state,
+                generatedConcepts: state.generatedConcepts.map(c => 
+                    c.id === action.payload.conceptId 
+                        ? { ...c, techPack: action.payload.techPack }
+                        : c
+                )
+            };
+        case 'ADD_SOURCING_RESULTS':
+            return {
+                ...state,
+                generatedConcepts: state.generatedConcepts.map(c => {
+                    if (c.id === action.payload.conceptId && c.techPack) {
+                        return {
+                            ...c,
+                            techPack: {
+                                ...c.techPack,
+                                sourcing_results: [
+                                    ...(c.techPack.sourcing_results || []),
+                                    ...action.payload.results
+                                ]
+                            }
+                        };
+                    }
+                    return c;
+                })
+            };
         case 'FINALIZE_CONCEPT':
             return { ...state, currentTab: AppTab.BLUEPRINT };
         case 'SET_FOCUSED_IMAGE':
