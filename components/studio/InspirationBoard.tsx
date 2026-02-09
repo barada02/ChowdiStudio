@@ -33,12 +33,15 @@ export const InspirationBoard: React.FC = () => {
     };
 
     return (
-        <div className="h-full flex flex-col">
-            <div className="h-10 px-3 border-b border-ide-border flex justify-between items-center bg-ide-panel">
-                <h2 className="text-xs font-bold text-ide-muted uppercase tracking-wider">Inspiration</h2>
+        <div className="h-full flex flex-col bg-ide-panel">
+            {/* Header */}
+            <div className="h-10 px-3 border-b border-ide-border flex justify-between items-center bg-ide-panel flex-shrink-0">
+                <h2 className="text-xs font-bold text-ide-muted uppercase tracking-wider flex items-center gap-2">
+                     Inspiration
+                </h2>
                 <button 
                     onClick={() => fileInputRef.current?.click()}
-                    className="p-1 hover:bg-ide-bg rounded text-ide-text transition"
+                    className="p-1.5 hover:bg-ide-bg rounded text-ide-text transition flex items-center justify-center"
                     title="Upload Image or Video"
                 >
                     <Icons.Upload size={14} />
@@ -52,32 +55,75 @@ export const InspirationBoard: React.FC = () => {
                 />
             </div>
             
-            <div className="flex-1 overflow-y-auto p-3 space-y-3 bg-ide-bg">
-                {state.inspirationBoard.length === 0 && (
-                    <div className="text-center text-ide-muted mt-10 p-4 border-2 border-dashed border-ide-border rounded-lg">
-                        <Icons.Image className="mx-auto mb-2 opacity-50" size={24} />
-                        <p className="text-xs">Drag & Drop inspiration here.</p>
-                    </div>
-                )}
-
-                {state.inspirationBoard.map(asset => (
-                    <div key={asset.id} className="relative group rounded overflow-hidden border border-ide-border bg-ide-panel shadow-sm">
-                        {asset.type === 'image' && (
-                            <img src={asset.content} alt={asset.name} className="w-full h-24 object-cover" />
-                        )}
-                        {asset.type === 'video' && (
-                            <video src={asset.content} className="w-full h-24 object-cover" controls={false} autoPlay muted loop />
-                        )}
-                        {asset.type === 'audio' && (
-                             <div className="w-full h-12 flex items-center justify-center bg-ide-panel text-ide-muted">
-                                <span className="text-xs">Audio Clip</span>
-                             </div>
-                        )}
-                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center pointer-events-none">
-                            <span className="text-[10px] text-white font-mono px-2 text-center truncate w-full">{asset.name}</span>
+            {/* Grid Container */}
+            <div className="flex-1 overflow-y-auto p-3 bg-ide-bg">
+                <div className="grid grid-cols-[repeat(auto-fill,minmax(120px,1fr))] gap-3">
+                    
+                    {/* Empty State */}
+                    {state.inspirationBoard.length === 0 && (
+                        <div className="col-span-full flex flex-col items-center justify-center text-center text-ide-muted mt-10 p-6 border-2 border-dashed border-ide-border rounded-lg bg-ide-panel/50">
+                            <Icons.Image className="mb-3 opacity-40" size={32} />
+                            <p className="text-xs font-medium">Drag & Drop Assets</p>
+                            <p className="text-[10px] mt-1 opacity-70">Images, Videos, Audio</p>
                         </div>
-                    </div>
-                ))}
+                    )}
+
+                    {/* Assets */}
+                    {state.inspirationBoard.map(asset => (
+                        <div 
+                            key={asset.id} 
+                            className="relative group rounded-md overflow-hidden border border-ide-border bg-ide-panel shadow-sm hover:shadow-md transition-all duration-200 break-inside-avoid"
+                        >
+                            {/* Media Content - h-auto allows aspect ratio to be preserved */}
+                            {asset.type === 'image' && (
+                                <img 
+                                    src={asset.content} 
+                                    alt={asset.name} 
+                                    className="w-full h-auto block" 
+                                    loading="lazy"
+                                />
+                            )}
+                            {asset.type === 'video' && (
+                                <video 
+                                    src={asset.content} 
+                                    className="w-full h-auto block bg-black" 
+                                    controls={false} 
+                                    autoPlay 
+                                    muted 
+                                    loop 
+                                    playsInline 
+                                />
+                            )}
+                            {asset.type === 'audio' && (
+                                 <div className="w-full h-20 flex flex-col items-center justify-center bg-ide-panel text-ide-muted p-2">
+                                    <div className="w-8 h-8 rounded-full bg-ide-bg flex items-center justify-center mb-2">
+                                        <div className="w-2 h-2 bg-ide-accent rounded-full animate-pulse"></div>
+                                    </div>
+                                    <span className="text-[9px] uppercase tracking-widest">Audio</span>
+                                 </div>
+                            )}
+
+                            {/* Hover Overlay */}
+                            <div className="absolute inset-0 bg-ide-bg/90 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center p-2 backdrop-blur-sm">
+                                <span className="text-[10px] text-ide-text font-mono text-center break-all line-clamp-3 leading-tight">
+                                    {asset.name}
+                                </span>
+                                <div className="mt-2 flex gap-2">
+                                    <button className="p-1.5 bg-ide-panel border border-ide-border rounded hover:text-ide-accent transition" title="Preview">
+                                        <Icons.Zoom size={12} />
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            {/* Type Badge */}
+                            <div className="absolute bottom-1 right-1 opacity-60 group-hover:opacity-0 transition-opacity">
+                                <span className="text-[9px] font-bold bg-black/50 text-white px-1.5 py-0.5 rounded backdrop-blur-md uppercase">
+                                    {asset.type}
+                                </span>
+                            </div>
+                        </div>
+                    ))}
+                </div>
             </div>
         </div>
     );
