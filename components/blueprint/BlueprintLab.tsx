@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { jsPDF } from 'jspdf';
 import { useStudio } from '../../context/StudioContext';
@@ -80,19 +81,24 @@ export const BlueprintLab: React.FC = () => {
         if (!finalConcept || !finalConcept.techPack) return;
         
         setCalculating(true);
-        const { yieldText, chartUrl } = await geminiService.runDeepCostAnalysis(finalConcept.techPack);
-        
-        // Update TechPack with new analysis data
-        const updatedTechPack = {
-            ...finalConcept.techPack,
-            analysis: {
-                fabric_yield_text: yieldText,
-                cost_chart_url: chartUrl
-            }
-        };
-
-        dispatch({ type: 'UPDATE_TECH_PACK', payload: { conceptId: finalConcept.id, techPack: updatedTechPack } });
-        setCalculating(false);
+        try {
+            const { yieldText, chartUrl } = await geminiService.runDeepCostAnalysis(finalConcept.techPack);
+            
+            // Update TechPack with new analysis data
+            const updatedTechPack = {
+                ...finalConcept.techPack,
+                analysis: {
+                    fabric_yield_text: yieldText,
+                    cost_chart_url: chartUrl
+                }
+            };
+    
+            dispatch({ type: 'UPDATE_TECH_PACK', payload: { conceptId: finalConcept.id, techPack: updatedTechPack } });
+        } catch (error) {
+            console.error("Deep analysis failed", error);
+        } finally {
+            setCalculating(false);
+        }
     };
 
     // --- 4. Export PDF Function (Magazine Style Engine) ---
@@ -171,7 +177,29 @@ export const BlueprintLab: React.FC = () => {
         doc.text(descLines, margin, yPos);
 
         // ============================
-        // PAGE 2: TECHNICAL DETAILS
+        // PAGE 2: DESIGN SKETCH (New)
+        // ============================
+        if (finalConcept.images.illustration) {
+            doc.addPage();
+            yPos = 20;
+
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(16);
+            doc.setTextColor(0);
+            doc.text("DESIGN SKETCH & MOOD", margin, yPos);
+            yPos += 15;
+
+            const imgH = await drawImageFit(finalConcept.images.illustration.url, yPos, pageHeight - 60);
+            yPos += imgH + 10;
+
+            doc.setFont("times", "italic");
+            doc.setFontSize(10);
+            doc.setTextColor(100);
+            doc.text("Fig 1.1 - Original Concept Illustration from Design Studio", margin, yPos);
+        }
+
+        // ============================
+        // PAGE 3: TECHNICAL DETAILS
         // ============================
         doc.addPage();
         yPos = 20;
@@ -233,7 +261,7 @@ export const BlueprintLab: React.FC = () => {
         });
 
         // ============================
-        // PAGE 3: BOM & COSTING
+        // PAGE 4: BOM & COSTING
         // ============================
         doc.addPage();
         yPos = 20;
@@ -244,7 +272,7 @@ export const BlueprintLab: React.FC = () => {
         yPos += 15;
 
         techPack.bom.forEach((item) => {
-            if (yPos > pageHeight - 40) { doc.addPage(); yPos = 20; }
+            if (yPos > pageHeight - 60) { doc.addPage(); yPos = 20; }
             
             // BOM Card
             doc.setDrawColor(200);
@@ -296,6 +324,38 @@ export const BlueprintLab: React.FC = () => {
         doc.text("TOTAL ESTIMATED COST", pageWidth - margin - 80, yPos, { align: 'right' });
         doc.setTextColor(0, 150, 0); // Green
         doc.text(`$${techPack.total_cost_estimate.toFixed(2)}`, pageWidth - margin - 5, yPos, { align: 'right' });
+
+        // ============================
+        // VERIFIED SUPPLIERS (New Section)
+        // ============================
+        if (techPack.sourcing_results && techPack.sourcing_results.length > 0) {
+            yPos += 20;
+            if (yPos > pageHeight - 40) { doc.addPage(); yPos = 20; }
+
+            doc.setFontSize(14);
+            doc.setTextColor(0);
+            doc.text("VERIFIED SUPPLIERS", margin, yPos);
+            yPos += 10;
+
+            doc.setFontSize(10);
+            doc.setFont("helvetica", "normal");
+            
+            techPack.sourcing_results.forEach(res => {
+                if (yPos > pageHeight - 20) { doc.addPage(); yPos = 20; }
+                
+                doc.setTextColor(0);
+                doc.setFont("helvetica", "bold");
+                doc.text(res.title, margin, yPos);
+                
+                doc.setTextColor(0, 0, 255);
+                doc.setFont("courier", "normal");
+                doc.setFontSize(9);
+                const urlText = doc.splitTextToSize(res.url, contentWidth);
+                doc.text(urlText, margin, yPos + 4);
+                
+                yPos += 12 + (urlText.length * 4);
+            });
+        }
 
         doc.save(`${finalConcept.name.replace(/\s+/g, '_')}_TechPack.pdf`);
     };

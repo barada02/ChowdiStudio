@@ -1,3 +1,4 @@
+
 import { GoogleGenAI, Type, FunctionDeclaration, Schema } from "@google/genai";
 import { MODELS, SYSTEM_INSTRUCTIONS } from "../constants";
 import { ChatMessage, InspirationAsset, TechPack, SourcingResult } from "../types";
@@ -415,7 +416,7 @@ ${assetManifest || "No assets uploaded."}
                 
                 TASK 1: Write a Python script to calculate the Total Fabric Yield for 100 units.
                 Assume standard 58" fabric width. Calculate efficiency with 15% wastage.
-                Print the result clearly.
+                PRINT the final textual result clearly.
 
                 TASK 2: In the same script, use 'matplotlib' to generate a Pie Chart for the Cost Breakdown.
                 Categories: Fabric, Trims, Labor (Assume labor is 40% of total if not specified), Overhead.
@@ -437,23 +438,30 @@ ${assetManifest || "No assets uploaded."}
             const parts = response.candidates?.[0]?.content?.parts;
             if (parts) {
                 for (const part of parts) {
-                    // 1. Text Output (Yield Calculation)
+                    // 1. Text Output
                     if (part.text) {
                         yieldText += part.text;
                     }
                     
-                    // 2. Image Output (Matplotlib Chart)
-                    // Code execution results often return inlineData with mimeType 'image/png'
+                    // 2. Code Execution Result (Standard Output Capture)
+                    // If the model prints the result but doesn't write a text block, we capture stdout
+                    if ((part as any).executableCodeResult) {
+                        const result = (part as any).executableCodeResult;
+                        if (result.outcome === 'OUTCOME_OK' && result.output) {
+                            yieldText += "\n\n**Calculation Output:**\n" + result.output;
+                        } else if (result.outcome === 'OUTCOME_FAILED') {
+                            yieldText += "\n\n*Analysis Error: Code execution failed.*";
+                        }
+                    }
+
+                    // 3. Image Output (Matplotlib Chart)
                     if (part.inlineData && part.inlineData.mimeType === 'image/png') {
                         chartUrl = `data:image/png;base64,${part.inlineData.data}`;
                     }
-                    
-                    // Sometimes it comes in executableCodeResult (less common in simple API, but good to check)
-                     if ((part as any).executableCodeResult?.outcome === 'OUTCOME_OK') {
-                        // The text output might be here in some versions, but usually it's in a separate text part
-                    }
                 }
             }
+
+            if (!yieldText) yieldText = "Analysis completed but returned no textual results.";
 
             return { yieldText, chartUrl };
 
@@ -487,18 +495,21 @@ ${assetManifest || "No assets uploaded."}
             const chunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
             if (chunks) {
                 chunks.forEach(chunk => {
+                    // Try to extract from 'web' property
                     if (chunk.web?.uri && chunk.web?.title) {
                         results.push({
                             query: query,
                             title: chunk.web.title,
                             url: chunk.web.uri,
-                            snippet: '' // Grounding chunks might not have snippets in this exact structure
+                            snippet: '' 
                         });
                     }
                 });
             }
 
-            return results.slice(0, 5); // Limit to top 5
+            // Fallback: If no grounding chunks, sometimes response.text has links, but we rely on chunks for structure.
+            // If empty, return an empty array, UI handles "no results".
+            return results.slice(0, 5); 
 
         } catch (error) {
             console.error("Sourcing Error:", error);
