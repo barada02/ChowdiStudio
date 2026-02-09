@@ -6,12 +6,13 @@ const initialState: AppState = {
     currentTab: AppTab.STUDIO,
     agentStatus: AgentStatus.IDLE,
     inspirationBoard: [],
+    selectedAssetIds: [], // Default empty
     generatedConcepts: [],
     activeConceptId: null,
     chatHistory: [{
         id: 'init',
         role: 'system',
-        content: 'Welcome to ChowdiStudio. I am your Master Agent. Upload inspiration or describe your vision to begin.',
+        content: 'Welcome to ChowdiStudio. I am your Master Agent. Select assets to share them with me, or simply start chatting.',
         timestamp: Date.now()
     }],
     focusedImageId: null,
@@ -25,6 +26,13 @@ const reducer = (state: AppState, action: Action): AppState => {
             return { ...state, currentTab: action.payload };
         case 'ADD_INSPIRATION':
             return { ...state, inspirationBoard: [...state.inspirationBoard, action.payload] };
+        case 'TOGGLE_ASSET_SELECTION':
+            return {
+                ...state,
+                selectedAssetIds: state.selectedAssetIds.includes(action.payload)
+                    ? state.selectedAssetIds.filter(id => id !== action.payload)
+                    : [...state.selectedAssetIds, action.payload]
+            };
         case 'SET_AGENT_STATUS':
             return { ...state, agentStatus: action.payload };
         case 'ADD_MESSAGE':

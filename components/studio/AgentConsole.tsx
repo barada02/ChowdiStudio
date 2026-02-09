@@ -29,10 +29,12 @@ export const AgentConsole: React.FC = () => {
         dispatch({ type: 'SET_AGENT_STATUS', payload: AgentStatus.THINKING });
         setInput('');
 
+        // Pass selectedAssetIds to the service
         const response = await geminiService.chatWithMasterAgent(
             state.chatHistory,
             userMsg.content,
-            state.inspirationBoard 
+            state.inspirationBoard,
+            state.selectedAssetIds 
         );
 
         const agentMsg: ChatMessage = {
@@ -47,8 +49,8 @@ export const AgentConsole: React.FC = () => {
         dispatch({ type: 'SET_AGENT_STATUS', payload: AgentStatus.IDLE });
 
         if (response.toolCalls && response.toolCalls.length > 0) {
-            const toolCall = response.toolCalls[0];
-            if (toolCall.name === 'generate_concepts') {
+            const toolCall = response.toolCalls.find((tc: any) => tc.name === 'generate_concepts');
+            if (toolCall) {
                 const args = toolCall.args;
                 await handleGeneration(args);
             }
@@ -109,7 +111,7 @@ export const AgentConsole: React.FC = () => {
                     <div key={msg.id} className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
                         <div 
                             className={`
-                                max-w-[90%] p-3 rounded-lg text-sm shadow-sm
+                                max-w-[90%] p-3 rounded-lg text-sm shadow-sm whitespace-pre-wrap
                                 ${msg.role === 'user' ? 'bg-ide-accent text-white rounded-br-none' : 'bg-ide-bg border border-ide-border text-ide-text rounded-bl-none'}
                             `}
                         >
@@ -127,7 +129,7 @@ export const AgentConsole: React.FC = () => {
                 {state.agentStatus !== AgentStatus.IDLE && (
                     <div className="flex items-center gap-2 text-xs text-ide-accent animate-pulse p-2">
                         <Icons.Spinner size={14} className="animate-spin" />
-                        {state.agentStatus === AgentStatus.THINKING ? 'Reasoning...' : 'Generating Assets...'}
+                        {state.agentStatus === AgentStatus.THINKING ? 'Reasoning & Analyzing...' : 'Generating Assets...'}
                     </div>
                 )}
             </div>

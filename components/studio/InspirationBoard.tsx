@@ -28,8 +28,14 @@ export const InspirationBoard: React.FC = () => {
                 name: file.name
             };
             dispatch({ type: 'ADD_INSPIRATION', payload: newAsset });
+            // Optionally auto-select new uploads
+            dispatch({ type: 'TOGGLE_ASSET_SELECTION', payload: newAsset.id });
         };
         reader.readAsDataURL(file);
+    };
+
+    const toggleSelection = (id: string) => {
+        dispatch({ type: 'TOGGLE_ASSET_SELECTION', payload: id });
     };
 
     return (
@@ -39,13 +45,15 @@ export const InspirationBoard: React.FC = () => {
                 <h2 className="text-xs font-bold text-ide-muted uppercase tracking-wider flex items-center gap-2">
                      Inspiration
                 </h2>
-                <button 
-                    onClick={() => fileInputRef.current?.click()}
-                    className="p-1.5 hover:bg-ide-bg rounded text-ide-text transition flex items-center justify-center"
-                    title="Upload Image or Video"
-                >
-                    <Icons.Upload size={14} />
-                </button>
+                <div className="flex items-center gap-2">
+                    <button 
+                        onClick={() => fileInputRef.current?.click()}
+                        className="p-1.5 hover:bg-ide-bg rounded text-ide-text transition flex items-center justify-center"
+                        title="Upload Image or Video"
+                    >
+                        <Icons.Upload size={14} />
+                    </button>
+                </div>
                 <input 
                     type="file" 
                     ref={fileInputRef} 
@@ -69,60 +77,70 @@ export const InspirationBoard: React.FC = () => {
                     )}
 
                     {/* Assets */}
-                    {state.inspirationBoard.map(asset => (
-                        <div 
-                            key={asset.id} 
-                            className="relative group rounded-md overflow-hidden border border-ide-border bg-ide-panel shadow-sm hover:shadow-md transition-all duration-200 break-inside-avoid"
-                        >
-                            {/* Media Content - h-auto allows aspect ratio to be preserved */}
-                            {asset.type === 'image' && (
-                                <img 
-                                    src={asset.content} 
-                                    alt={asset.name} 
-                                    className="w-full h-auto block" 
-                                    loading="lazy"
-                                />
-                            )}
-                            {asset.type === 'video' && (
-                                <video 
-                                    src={asset.content} 
-                                    className="w-full h-auto block bg-black" 
-                                    controls={false} 
-                                    autoPlay 
-                                    muted 
-                                    loop 
-                                    playsInline 
-                                />
-                            )}
-                            {asset.type === 'audio' && (
-                                 <div className="w-full h-20 flex flex-col items-center justify-center bg-ide-panel text-ide-muted p-2">
-                                    <div className="w-8 h-8 rounded-full bg-ide-bg flex items-center justify-center mb-2">
-                                        <div className="w-2 h-2 bg-ide-accent rounded-full animate-pulse"></div>
-                                    </div>
-                                    <span className="text-[9px] uppercase tracking-widest">Audio</span>
-                                 </div>
-                            )}
+                    {state.inspirationBoard.map(asset => {
+                        const isSelected = state.selectedAssetIds.includes(asset.id);
+                        return (
+                            <div 
+                                key={asset.id} 
+                                onClick={() => toggleSelection(asset.id)}
+                                className={`
+                                    relative group rounded-md overflow-hidden border cursor-pointer transition-all duration-200 break-inside-avoid
+                                    ${isSelected ? 'border-ide-accent ring-2 ring-ide-accent ring-opacity-50 shadow-md' : 'border-ide-border bg-ide-panel opacity-80 hover:opacity-100'}
+                                `}
+                            >
+                                {/* Selection Indicator */}
+                                <div className={`absolute top-2 right-2 z-20 w-4 h-4 rounded-sm border flex items-center justify-center transition-colors ${isSelected ? 'bg-ide-accent border-ide-accent' : 'bg-black/30 border-white/50'}`}>
+                                    {isSelected && <Icons.Check size={10} className="text-white" />}
+                                </div>
 
-                            {/* Hover Overlay */}
-                            <div className="absolute inset-0 bg-ide-bg/90 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center p-2 backdrop-blur-sm">
-                                <span className="text-[10px] text-ide-text font-mono text-center break-all line-clamp-3 leading-tight">
-                                    {asset.name}
-                                </span>
-                                <div className="mt-2 flex gap-2">
-                                    <button className="p-1.5 bg-ide-panel border border-ide-border rounded hover:text-ide-accent transition" title="Preview">
-                                        <Icons.Zoom size={12} />
-                                    </button>
+                                {/* Media Content */}
+                                {asset.type === 'image' && (
+                                    <img 
+                                        src={asset.content} 
+                                        alt={asset.name} 
+                                        className="w-full h-auto block" 
+                                        loading="lazy"
+                                    />
+                                )}
+                                {asset.type === 'video' && (
+                                    <video 
+                                        src={asset.content} 
+                                        className="w-full h-auto block bg-black" 
+                                        controls={false} 
+                                        autoPlay={false} // Don't autoplay to save resources, preview on hover?
+                                        muted 
+                                        loop 
+                                        playsInline 
+                                    />
+                                )}
+                                {asset.type === 'audio' && (
+                                     <div className="w-full h-20 flex flex-col items-center justify-center bg-ide-panel text-ide-muted p-2">
+                                        <div className="w-8 h-8 rounded-full bg-ide-bg flex items-center justify-center mb-2">
+                                            <div className="w-2 h-2 bg-ide-accent rounded-full animate-pulse"></div>
+                                        </div>
+                                        <span className="text-[9px] uppercase tracking-widest">Audio</span>
+                                     </div>
+                                )}
+
+                                {/* Hover Overlay */}
+                                <div className="absolute inset-0 bg-ide-bg/90 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center p-2 backdrop-blur-sm">
+                                    <span className="text-[10px] text-ide-text font-mono text-center break-all line-clamp-3 leading-tight">
+                                        {asset.name}
+                                    </span>
+                                    <p className="text-[9px] text-ide-accent mt-2 font-bold">
+                                        {isSelected ? 'SHARED WITH AI' : 'CLICK TO SHARE'}
+                                    </p>
+                                </div>
+                                
+                                {/* Type Badge */}
+                                <div className="absolute bottom-1 right-1 opacity-60 group-hover:opacity-0 transition-opacity">
+                                    <span className="text-[9px] font-bold bg-black/50 text-white px-1.5 py-0.5 rounded backdrop-blur-md uppercase">
+                                        {asset.type}
+                                    </span>
                                 </div>
                             </div>
-                            
-                            {/* Type Badge */}
-                            <div className="absolute bottom-1 right-1 opacity-60 group-hover:opacity-0 transition-opacity">
-                                <span className="text-[9px] font-bold bg-black/50 text-white px-1.5 py-0.5 rounded backdrop-blur-md uppercase">
-                                    {asset.type}
-                                </span>
-                            </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             </div>
         </div>

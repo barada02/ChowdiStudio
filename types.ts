@@ -57,6 +57,7 @@ export interface AppState {
     currentTab: AppTab;
     agentStatus: AgentStatus;
     inspirationBoard: InspirationAsset[];
+    selectedAssetIds: string[]; // NEW: Track which assets are explicitly selected
     generatedConcepts: DesignConcept[];
     activeConceptId: string | null;
     chatHistory: ChatMessage[];
@@ -67,6 +68,7 @@ export type Action =
     | { type: 'TOGGLE_THEME' }
     | { type: 'SET_TAB'; payload: AppTab }
     | { type: 'ADD_INSPIRATION'; payload: InspirationAsset }
+    | { type: 'TOGGLE_ASSET_SELECTION'; payload: string } // NEW
     | { type: 'SET_AGENT_STATUS'; payload: AgentStatus }
     | { type: 'ADD_MESSAGE'; payload: ChatMessage }
     | { type: 'SET_CONCEPTS'; payload: DesignConcept[] }
