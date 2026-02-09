@@ -1,6 +1,6 @@
 import React from 'react';
 import { useStudio } from '../../context/StudioContext';
-import { DesignConcept, ViewType } from '../../types';
+import { ViewType } from '../../types';
 import { Icons } from '../ui/Icons';
 
 export const GenerationBoard: React.FC = () => {
@@ -74,35 +74,51 @@ export const GenerationBoard: React.FC = () => {
                 {/* Detail Body */}
                 <div className="flex-1 flex overflow-hidden">
                     {/* Visuals (Takes max space) */}
-                    <div className="flex-1 p-6 overflow-y-auto flex items-center justify-center gap-6 bg-ide-bg">
-                        {['front', 'back'].map((view) => {
-                            const img = activeConcept.images[view as 'front' | 'back'];
-                            return (
-                                <div key={view} className="relative group h-full max-h-[80vh] aspect-[3/4] bg-ide-panel rounded-lg shadow-2xl border border-ide-border overflow-hidden transition-transform duration-500">
-                                    <div className="absolute top-0 left-0 right-0 p-3 bg-gradient-to-b from-black/50 to-transparent z-10 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <span className="text-white text-xs font-bold uppercase tracking-widest">{view} VIEW</span>
-                                    </div>
-                                    
-                                    {img ? (
-                                        <img src={img.url} className="w-full h-full object-cover" alt={view} />
-                                    ) : (
-                                        <div className="w-full h-full flex items-center justify-center">
-                                            <Icons.Spinner className="animate-spin text-ide-muted" />
-                                        </div>
-                                    )}
-
-                                    {img && (
-                                        <button 
-                                            onClick={() => handleFocus(img.id)}
-                                            className="absolute bottom-4 right-4 p-3 bg-ide-accent text-white rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition transform scale-90 group-hover:scale-100 hover:bg-blue-600"
-                                            title="Edit / Inpaint"
-                                        >
-                                            <Icons.Edit size={16} />
-                                        </button>
-                                    )}
+                    <div className="flex-1 p-6 overflow-y-auto flex items-center justify-center gap-8 bg-ide-bg">
+                        
+                        {/* 1. Hero View (Realistic) - Editable */}
+                        <div className="relative group h-full max-h-[85vh] aspect-[3/4] bg-ide-panel rounded-lg shadow-2xl border border-ide-border overflow-hidden">
+                             <div className="absolute top-0 left-0 right-0 p-3 bg-gradient-to-b from-black/50 to-transparent z-10">
+                                <span className="text-white text-xs font-bold uppercase tracking-widest flex items-center gap-2">
+                                    <Icons.Camera size={14}/> Lookbook (Hero)
+                                </span>
+                            </div>
+                            {activeConcept.images.hero ? (
+                                <img src={activeConcept.images.hero.url} className="w-full h-full object-cover" alt="Hero" />
+                            ) : (
+                                <div className="w-full h-full flex items-center justify-center">
+                                    <Icons.Spinner className="animate-spin text-ide-muted" />
                                 </div>
-                            );
-                        })}
+                            )}
+                            
+                            {/* Edit Button for Hero */}
+                            {activeConcept.images.hero && (
+                                <button 
+                                    onClick={() => handleFocus(activeConcept.images.hero!.id)}
+                                    className="absolute bottom-6 right-6 p-4 bg-ide-accent text-white rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition transform scale-90 group-hover:scale-100 hover:bg-blue-600 z-20"
+                                    title="Edit Design"
+                                >
+                                    <Icons.Edit size={20} />
+                                </button>
+                            )}
+                        </div>
+
+                         {/* 2. Illustration View (Artistic Mood) - Read Only */}
+                        <div className="relative group h-[70vh] aspect-[3/4] bg-white rounded-lg shadow-xl border border-ide-border overflow-hidden rotate-1 transform hover:rotate-0 transition duration-300">
+                             <div className="absolute top-0 left-0 right-0 p-3 bg-white/90 border-b border-gray-100 z-10">
+                                <span className="text-black text-xs font-bold uppercase tracking-widest flex items-center gap-2">
+                                    <Icons.PenTool size={14}/> Mood Sketch
+                                </span>
+                            </div>
+                            {activeConcept.images.illustration ? (
+                                <img src={activeConcept.images.illustration.url} className="w-full h-full object-cover" alt="Fashion Illustration" />
+                            ) : (
+                                <div className="w-full h-full flex items-center justify-center bg-gray-50">
+                                    <Icons.Spinner className="animate-spin text-gray-400" />
+                                    <span className="text-xs text-gray-400 ml-2">Sketching...</span>
+                                </div>
+                            )}
+                        </div>
                     </div>
 
                     {/* Sidebar Info */}
@@ -115,22 +131,22 @@ export const GenerationBoard: React.FC = () => {
                         </p>
 
                         <h3 className="text-xs font-bold text-ide-muted uppercase mb-4 flex items-center gap-2">
-                             Details
+                             Workflow
                         </h3>
                         <div className="space-y-3">
                             <div className="p-3 bg-ide-bg rounded border border-ide-border">
-                                <span className="block text-[10px] text-ide-muted uppercase mb-1">Generated</span>
-                                <span className="text-xs font-mono text-ide-text">Gemini 3 Pro Image</span>
+                                <span className="block text-[10px] text-ide-muted uppercase mb-1">Primary Asset</span>
+                                <span className="text-xs font-mono text-ide-text">Hero Image (Editable)</span>
                             </div>
                             <div className="p-3 bg-ide-bg rounded border border-ide-border">
-                                <span className="block text-[10px] text-ide-muted uppercase mb-1">Style</span>
-                                <span className="text-xs font-mono text-ide-text">High Fashion / Sketch</span>
+                                <span className="block text-[10px] text-ide-muted uppercase mb-1">Secondary Asset</span>
+                                <span className="text-xs font-mono text-ide-text">Fashion Illustration (Auto)</span>
                             </div>
                         </div>
 
                          <div className="mt-8 pt-6 border-t border-ide-border text-center">
                             <p className="text-[10px] text-ide-muted italic">
-                                "Click the Edit icon on the image to refine details using the mask editor."
+                                "Editing the Hero image will automatically update the Mood Sketch."
                             </p>
                         </div>
                     </div>
@@ -162,21 +178,25 @@ export const GenerationBoard: React.FC = () => {
                         
                         <p className="text-xs text-ide-muted mb-4 h-8 overflow-hidden text-ellipsis leading-relaxed line-clamp-2">{concept.description}</p>
 
-                        <div className="grid grid-cols-2 gap-3 pointer-events-none">
-                            {/* Previews (pointer-events-none so clicking them selects the card) */}
-                            <div className="aspect-[3/4] bg-ide-bg rounded border border-ide-border overflow-hidden opacity-80 group-hover:opacity-100 transition">
-                                {concept.images.front ? (
-                                    <img src={concept.images.front.url} className="w-full h-full object-cover" alt="Front" />
+                        <div className="grid grid-cols-5 gap-3 pointer-events-none">
+                            {/* Hero Image (Larger) */}
+                            <div className="col-span-3 aspect-[3/4] bg-ide-bg rounded border border-ide-border overflow-hidden opacity-90 group-hover:opacity-100 transition relative">
+                                {concept.images.hero ? (
+                                    <img src={concept.images.hero.url} className="w-full h-full object-cover" alt="Hero" />
                                 ) : (
                                     <div className="w-full h-full bg-ide-bg animate-pulse"></div>
                                 )}
+                                <div className="absolute bottom-0 left-0 bg-black/50 text-white text-[9px] px-2 py-0.5">LOOKBOOK</div>
                             </div>
-                            <div className="aspect-[3/4] bg-ide-bg rounded border border-ide-border overflow-hidden opacity-80 group-hover:opacity-100 transition">
-                                {concept.images.back ? (
-                                    <img src={concept.images.back.url} className="w-full h-full object-cover" alt="Back" />
+                            
+                            {/* Illustration (Smaller) */}
+                            <div className="col-span-2 aspect-[3/4] bg-white rounded border border-ide-border overflow-hidden opacity-90 group-hover:opacity-100 transition relative">
+                                {concept.images.illustration ? (
+                                    <img src={concept.images.illustration.url} className="w-full h-full object-cover" alt="Illustration" />
                                 ) : (
-                                    <div className="w-full h-full bg-ide-bg animate-pulse"></div>
+                                    <div className="w-full h-full bg-gray-100 animate-pulse"></div>
                                 )}
+                                 <div className="absolute bottom-0 left-0 bg-gray-200 text-gray-800 text-[9px] px-2 py-0.5">SKETCH</div>
                             </div>
                         </div>
                         

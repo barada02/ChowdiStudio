@@ -11,7 +11,7 @@ const getApiKey = (): string => {
 
 const generateConceptsTool: FunctionDeclaration = {
     name: 'generate_concepts',
-    description: 'Generates two distinct fashion design concepts (Front and Back views) based on a detailed description.',
+    description: 'Generates two distinct fashion design concepts based on a detailed description.',
     parameters: {
         type: Type.OBJECT,
         properties: {
@@ -199,13 +199,15 @@ ${assetManifest || "No assets uploaded."}
     }
 
     /**
-     * Generates an image using the high-quality image model.
+     * GENERATION STEP 1: Hero Image (Source of Truth)
+     * Creates a high-fidelity, realistic lookbook shot.
      */
-    async generateImage(prompt: string, view: 'Front View' | 'Back View'): Promise<string> {
+    async generateHeroImage(prompt: string): Promise<string> {
         if (!getApiKey()) return "https://picsum.photos/800/1200";
 
         try {
-            const finalPrompt = `High fashion technical drawing, ${view}, ${prompt}, plain neutral background, photorealistic 8k, fashion design sketch style.`;
+            // Emphasis on Realism and Full Body
+            const finalPrompt = `High fashion photography, full body shot of a model wearing: ${prompt}. Professional studio lighting, 8k resolution, detailed texture, vogue editorial style.`;
 
             const response = await this.ai.models.generateContent({
                 model: MODELS.IMAGE_GEN,
@@ -220,8 +222,91 @@ ${assetManifest || "No assets uploaded."}
             throw new Error("No image generated");
 
         } catch (error) {
-            console.error("Image Gen Error:", error);
+            console.error("Hero Gen Error:", error);
             return "https://picsum.photos/seed/error/800/1200"; 
+        }
+    }
+
+    /**
+     * GENERATION STEP 2: Fashion Illustration (Artistic Mood Sketch)
+     * Takes the Hero Image and converts it into a hand-drawn fashion illustration.
+     */
+    async generateFashionIllustration(heroImageBase64: string): Promise<string> {
+        if (!getApiKey()) return "https://picsum.photos/800/600"; 
+
+        try {
+            const base64Data = heroImageBase64.split(',')[1];
+            
+            const sketchPrompt = `
+                Create a high-end Fashion Illustration of this design.
+                Style: Mixed media fashion sketch, watercolor and ink on textured paper.
+                Composition: Show the outfit clearly with artistic shading, highlights, and movement.
+                Vibe: Painterly, expressive, elegant, like a designer's mood sketch.
+                Background: Neutral vintage paper or subtle wash.
+            `;
+
+            const response = await this.ai.models.generateContent({
+                model: MODELS.IMAGE_GEN,
+                contents: {
+                    parts: [
+                        { inlineData: { mimeType: 'image/png', data: base64Data } },
+                        { text: sketchPrompt }
+                    ]
+                }
+            });
+
+            for (const part of response.candidates[0].content.parts) {
+                if (part.inlineData) {
+                    return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+                }
+            }
+            return heroImageBase64; 
+
+        } catch (error) {
+            console.error("Illustration Gen Error:", error);
+            return heroImageBase64;
+        }
+    }
+
+    /**
+     * GENERATION STEP 3: Technical Sketch (Production Ready)
+     * Takes the Hero Image and converts it into a combined Front & Back technical flat.
+     * This is usually called when moving to Blueprint.
+     */
+    async generateTechnicalSketch(heroImageBase64: string): Promise<string> {
+        if (!getApiKey()) return "https://picsum.photos/800/600";
+
+        try {
+            const base64Data = heroImageBase64.split(',')[1];
+            
+            const technicalPrompt = `
+                Create a professional Fashion Design Technical Flat Sketch based on the outfit in the image.
+                Layout: Show BOTH Front View and Back View side-by-side in a single frame.
+                Style: Black and white line art, clean lines, minimal shading, white background.
+                Detail: Capture all seams, pockets, and construction details from the source image.
+                No model, just the garment (or mannequin).
+            `;
+
+            const response = await this.ai.models.generateContent({
+                model: MODELS.IMAGE_GEN,
+                contents: {
+                    parts: [
+                        { inlineData: { mimeType: 'image/png', data: base64Data } },
+                        { text: technicalPrompt }
+                    ]
+                }
+            });
+
+            for (const part of response.candidates[0].content.parts) {
+                if (part.inlineData) {
+                    return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+                }
+            }
+            return heroImageBase64;
+
+        } catch (error) {
+            console.error("Technical Gen Error:", error);
+            return heroImageBase64;
         }
     }
 

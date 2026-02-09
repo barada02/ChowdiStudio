@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useStudio } from '../../context/StudioContext';
-import { AppTab } from '../../types';
+import { geminiService } from '../../services/geminiService';
+import { AppTab, ViewType } from '../../types';
 import { Icons } from '../ui/Icons';
 
 export const BlueprintLab: React.FC = () => {
@@ -10,6 +11,29 @@ export const BlueprintLab: React.FC = () => {
     const finalConcept = state.activeConceptId 
         ? state.generatedConcepts.find(c => c.id === state.activeConceptId)
         : null;
+
+    // Auto-generate Technical Flat if missing when entering Blueprint
+    useEffect(() => {
+        const generateFlat = async () => {
+            if (finalConcept && finalConcept.images.hero && !finalConcept.images.technical) {
+                const techId = `img-${finalConcept.id}-t`;
+                // Temporary placeholder URL or just rely on async state update
+                const techUrl = await geminiService.generateTechnicalSketch(finalConcept.images.hero.url);
+                
+                dispatch({ 
+                    type: 'UPDATE_CONCEPT_IMAGE', 
+                    payload: { 
+                        conceptId: finalConcept.id, 
+                        imageId: techId, 
+                        view: ViewType.TECHNICAL, 
+                        url: techUrl 
+                    } 
+                });
+            }
+        };
+
+        generateFlat();
+    }, [finalConcept]);
 
     if (!finalConcept) {
         return (
@@ -44,12 +68,19 @@ export const BlueprintLab: React.FC = () => {
                 <div className="lg:col-span-2 space-y-8">
                     <div className="grid grid-cols-2 gap-4">
                         <div className="bg-ide-panel p-4 rounded border border-ide-border shadow-sm">
-                            <h3 className="text-xs font-bold text-ide-muted mb-2 uppercase">Front Elevation</h3>
-                            <img src={finalConcept.images.front?.url} className="w-full rounded" alt="Front" />
+                            <h3 className="text-xs font-bold text-ide-muted mb-2 uppercase">Lookbook Reference</h3>
+                            <img src={finalConcept.images.hero?.url} className="w-full rounded" alt="Hero View" />
                         </div>
                         <div className="bg-ide-panel p-4 rounded border border-ide-border shadow-sm">
-                            <h3 className="text-xs font-bold text-ide-muted mb-2 uppercase">Back Elevation</h3>
-                            <img src={finalConcept.images.back?.url} className="w-full rounded" alt="Back" />
+                            <h3 className="text-xs font-bold text-ide-muted mb-2 uppercase">Technical Flat (Front & Back)</h3>
+                            {finalConcept.images.technical ? (
+                                <img src={finalConcept.images.technical.url} className="w-full rounded bg-white p-2" alt="Technical View" />
+                            ) : (
+                                <div className="w-full aspect-square flex flex-col items-center justify-center bg-gray-50 border border-dashed border-gray-200">
+                                    <Icons.Spinner className="animate-spin text-ide-accent mb-2" />
+                                    <span className="text-xs text-gray-500">Generating Technical Schematics...</span>
+                                </div>
+                            )}
                         </div>
                     </div>
 

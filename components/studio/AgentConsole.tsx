@@ -82,23 +82,33 @@ export const AgentConsole: React.FC = () => {
 
         dispatch({ type: 'SET_CONCEPTS', payload: newConcepts });
 
-        // Generate Pre-computed IDs for the images
-        const c1FrontId = `img-${concept1Id}-f`;
-        const c1BackId = `img-${concept1Id}-b`;
-        const c2FrontId = `img-${concept2Id}-f`;
-        const c2BackId = `img-${concept2Id}-b`;
+        // Helper to run sequence for one concept
+        const generateConceptAssets = async (conceptId: string, description: string) => {
+             const heroId = `img-${conceptId}-h`;
+             const sketchId = `img-${conceptId}-s`;
 
-        const c1FrontProm = geminiService.generateImage(args.concept1_description, 'Front View');
-        const c1BackProm = geminiService.generateImage(args.concept1_description, 'Back View');
-        const c2FrontProm = geminiService.generateImage(args.concept2_description, 'Front View');
-        const c2BackProm = geminiService.generateImage(args.concept2_description, 'Back View');
+             // 1. Generate Hero (Source of Truth)
+             const heroUrl = await geminiService.generateHeroImage(description);
+             
+             dispatch({ 
+                type: 'UPDATE_CONCEPT_IMAGE', 
+                payload: { conceptId, imageId: heroId, view: ViewType.HERO, url: heroUrl } 
+             });
 
-        const [c1f, c1b, c2f, c2b] = await Promise.all([c1FrontProm, c1BackProm, c2FrontProm, c2BackProm]);
+             // 2. Generate Fashion Illustration (Derived from Hero, Artistic)
+             const sketchUrl = await geminiService.generateFashionIllustration(heroUrl);
 
-        dispatch({ type: 'UPDATE_CONCEPT_IMAGE', payload: { conceptId: concept1Id, imageId: c1FrontId, view: ViewType.FRONT, url: c1f } });
-        dispatch({ type: 'UPDATE_CONCEPT_IMAGE', payload: { conceptId: concept1Id, imageId: c1BackId, view: ViewType.BACK, url: c1b } });
-        dispatch({ type: 'UPDATE_CONCEPT_IMAGE', payload: { conceptId: concept2Id, imageId: c2FrontId, view: ViewType.FRONT, url: c2f } });
-        dispatch({ type: 'UPDATE_CONCEPT_IMAGE', payload: { conceptId: concept2Id, imageId: c2BackId, view: ViewType.BACK, url: c2b } });
+             dispatch({ 
+                type: 'UPDATE_CONCEPT_IMAGE', 
+                payload: { conceptId, imageId: sketchId, view: ViewType.ILLUSTRATION, url: sketchUrl } 
+             });
+        };
+
+        // Run both concepts in parallel
+        await Promise.all([
+            generateConceptAssets(concept1Id, args.concept1_description),
+            generateConceptAssets(concept2Id, args.concept2_description)
+        ]);
 
         dispatch({ type: 'SET_AGENT_STATUS', payload: AgentStatus.IDLE });
     };

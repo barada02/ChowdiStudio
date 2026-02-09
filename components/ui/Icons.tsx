@@ -31,6 +31,7 @@ export const Icons = {
     Send: Send,
     Spinner: Loader2,
     Edit: PenTool,
+    PenTool: PenTool,
     Check: Check,
     Upload: Upload,
     Zoom: ZoomIn,

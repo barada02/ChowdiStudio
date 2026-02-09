@@ -12,10 +12,9 @@ export const FocusEditor: React.FC = () => {
     const [ctx, setCtx] = useState<CanvasRenderingContext2D | null>(null);
 
     // Find the currently focused image object
-    // Note: The logic here relies on valid ID matching. 
-    // The previous reducer fix ensures IDs are present.
+    // Note: We check both hero and technical, but UI only allows editing hero.
     const focusedImage = state.generatedConcepts
-        .flatMap(c => [c.images.front, c.images.back])
+        .flatMap(c => [c.images.hero, c.images.technical])
         .find(img => img?.id === state.focusedImageId);
 
     const activeConcept = state.generatedConcepts.find(c => c.id === focusedImage?.conceptId);
@@ -28,7 +27,7 @@ export const FocusEditor: React.FC = () => {
                 setCtx(context);
                 const img = new Image();
                 img.src = focusedImage.url;
-                img.crossOrigin = "anonymous"; // Needed if using external URLs, though here it's mostly base64
+                img.crossOrigin = "anonymous"; 
                 img.onload = () => {
                     if (canvasRef.current) {
                         // Set canvas size to match image resolution
@@ -46,7 +45,6 @@ export const FocusEditor: React.FC = () => {
         setIsDrawing(true);
         ctx.beginPath();
         
-        // Calculate coordinate based on scaling (visual size vs actual canvas size)
         const canvas = canvasRef.current;
         if (!canvas) return;
         
@@ -56,8 +54,8 @@ export const FocusEditor: React.FC = () => {
 
         ctx.moveTo((e.clientX - rect.left) * scaleX, (e.clientY - rect.top) * scaleY);
         
-        ctx.strokeStyle = 'rgba(255, 0, 0, 0.5)'; // Visual mask color (Red, 50% opacity)
-        ctx.lineWidth = 25 * scaleX; // Scale stroke width relative to image size
+        ctx.strokeStyle = 'rgba(255, 0, 0, 0.5)'; // Visual mask color
+        ctx.lineWidth = 25 * scaleX; 
         ctx.lineCap = 'round';
     };
 
@@ -83,19 +81,40 @@ export const FocusEditor: React.FC = () => {
         
         dispatch({ type: 'SET_AGENT_STATUS', payload: AgentStatus.EDITING });
         
-        // --- KEY CHANGE: Send the CANVAS data (Image + Drawing), not the original URL ---
+        // 1. Get Masked Hero Image
         const maskedImageBase64 = canvasRef.current.toDataURL('image/png');
 
-        // This effectively delegates the task to the "Edit Agent" (Service function)
-        const newImageUrl = await geminiService.editImage(maskedImageBase64, prompt);
+        // 2. Generate New Hero Image
+        const newHeroUrl = await geminiService.editImage(maskedImageBase64, prompt);
         
+        // Update Hero immediately
         dispatch({ 
             type: 'UPDATE_CONCEPT_IMAGE', 
             payload: { 
                 conceptId: activeConcept.id, 
-                imageId: focusedImage.id, // Keep same ID or generate new one? Keeping same ID updates the view in place.
-                view: focusedImage.view, 
-                url: newImageUrl 
+                imageId: focusedImage.id, 
+                view: ViewType.HERO, 
+                url: newHeroUrl 
+            } 
+        });
+
+        // 3. Regenerate Technical Sketch (Synchronization)
+        // We do this after updating Hero, effectively "Chaining" the sync.
+        // We use a temporary status or just let it happen in background? 
+        // Better to show status.
+        
+        // NOTE: Ideally we'd show a "Syncing Sketches..." status, 
+        // but for now we'll just do it in the same EDITING block.
+        const techId = activeConcept.images.technical?.id || `img-${activeConcept.id}-t`;
+        const newTechUrl = await geminiService.generateTechnicalSketch(newHeroUrl);
+
+        dispatch({ 
+            type: 'UPDATE_CONCEPT_IMAGE', 
+            payload: { 
+                conceptId: activeConcept.id, 
+                imageId: techId, 
+                view: ViewType.TECHNICAL, 
+                url: newTechUrl 
             } 
         });
         
@@ -154,6 +173,10 @@ export const FocusEditor: React.FC = () => {
                                 onChange={(e) => setPrompt(e.target.value)}
                             />
                          </div>
+                         
+                         <div className="bg-blue-500/10 text-blue-500 p-2 rounded text-[10px] border border-blue-500/20">
+                             <strong>Note:</strong> Applying edits will automatically update the Technical Sketch.
+                         </div>
 
                          <button 
                             onClick={handleApplyEdit}
@@ -166,7 +189,7 @@ export const FocusEditor: React.FC = () => {
                             `}
                          >
                              {state.agentStatus === AgentStatus.EDITING ? (
-                                 <><Icons.Spinner className="animate-spin" size={16} /> Processing...</>
+                                 <><Icons.Spinner className="animate-spin" size={16} /> Syncing Designs...</>
                              ) : (
                                  <><Icons.Send size={16} /> Generate Edit</>
                              )}

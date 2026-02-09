@@ -20,12 +20,12 @@ export const RunwayStage: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [viewingAsset, setViewingAsset] = useState<RunwayAsset | null>(null);
 
-    // Filter valid concepts (must have at least one image)
-    const validConcepts = state.generatedConcepts.filter(c => c.images.front);
+    // Filter valid concepts (must have a hero image)
+    const validConcepts = state.generatedConcepts.filter(c => c.images.hero);
 
     const handleProduce = async () => {
         const concept = state.generatedConcepts.find(c => c.id === selectedConceptId);
-        if (!concept || !concept.images.front) return;
+        if (!concept || !concept.images.hero) return;
 
         dispatch({ type: 'SET_AGENT_STATUS', payload: AgentStatus.PRODUCING });
         setError(null);
@@ -37,10 +37,10 @@ export const RunwayStage: React.FC = () => {
 
             if (mode === 'video') {
                 // Generate Video
-                resultUrl = await geminiService.generateRunwayVideo(concept.images.front.url, prompt);
+                resultUrl = await geminiService.generateRunwayVideo(concept.images.hero.url, prompt);
             } else {
                 // Generate Photo
-                resultUrl = await geminiService.generateRunwayPhoto(concept.images.front.url, prompt);
+                resultUrl = await geminiService.generateRunwayPhoto(concept.images.hero.url, prompt);
             }
 
             const newAsset: RunwayAsset = {
@@ -97,7 +97,7 @@ export const RunwayStage: React.FC = () => {
                                         ${selectedConceptId === c.id ? 'border-ide-accent ring-1 ring-ide-accent' : 'border-ide-border opacity-70 hover:opacity-100'}
                                     `}
                                 >
-                                    <img src={c.images.front?.url} className="w-full h-full object-cover rounded-sm" alt={c.name} />
+                                    <img src={c.images.hero?.url} className="w-full h-full object-cover rounded-sm" alt={c.name} />
                                     <div className="absolute inset-x-0 bottom-0 bg-black/60 p-1 truncate text-[10px] text-white">
                                         {c.name}
                                     </div>

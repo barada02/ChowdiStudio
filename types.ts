@@ -1,8 +1,9 @@
 // Domain Types
 
 export enum ViewType {
-    FRONT = 'FRONT',
-    BACK = 'BACK'
+    HERO = 'HERO', // Realistic Model View (Source of Truth)
+    ILLUSTRATION = 'ILLUSTRATION', // Artistic Fashion Sketch (Mood/Texture)
+    TECHNICAL = 'TECHNICAL' // Combined Front/Back Schematic (Production)
 }
 
 export interface DesignImage {
@@ -17,8 +18,9 @@ export interface DesignConcept {
     name: string;
     description: string;
     images: {
-        front?: DesignImage;
-        back?: DesignImage;
+        hero?: DesignImage;
+        illustration?: DesignImage;
+        technical?: DesignImage;
     };
     isFinalized: boolean;
 }
