@@ -16,7 +16,10 @@ import {
     Moon,
     GripVertical,
     ArrowLeft,
-    X
+    X,
+    Clapperboard,
+    Film,
+    Camera
 } from 'lucide-react';
 
 export const Icons = {
@@ -38,5 +41,8 @@ export const Icons = {
     Moon: Moon,
     Drag: GripVertical,
     ArrowLeft: ArrowLeft,
-    X: X
+    X: X,
+    Runway: Clapperboard,
+    Video: Film,
+    Camera: Camera
 };

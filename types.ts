@@ -31,6 +31,16 @@ export interface InspirationAsset {
     name: string;
 }
 
+export interface RunwayAsset {
+    id: string;
+    type: 'video' | 'image';
+    url: string; // Blob URL or Base64
+    thumbnailUrl?: string; 
+    conceptId: string;
+    scenario: string;
+    timestamp: number;
+}
+
 export interface ChatMessage {
     id: string;
     role: 'user' | 'agent' | 'system';
@@ -42,14 +52,16 @@ export interface ChatMessage {
 
 export enum AppTab {
     STUDIO = 'STUDIO',
-    BLUEPRINT = 'BLUEPRINT'
+    BLUEPRINT = 'BLUEPRINT',
+    RUNWAY = 'RUNWAY'
 }
 
 export enum AgentStatus {
     IDLE = 'IDLE',
     THINKING = 'THINKING',
     GENERATING = 'GENERATING',
-    EDITING = 'EDITING'
+    EDITING = 'EDITING',
+    PRODUCING = 'PRODUCING' // New status for video generation
 }
 
 export interface AppState {
@@ -57,11 +69,12 @@ export interface AppState {
     currentTab: AppTab;
     agentStatus: AgentStatus;
     inspirationBoard: InspirationAsset[];
-    selectedAssetIds: string[]; // NEW: Track which assets are explicitly selected
+    selectedAssetIds: string[]; 
     generatedConcepts: DesignConcept[];
     activeConceptId: string | null;
     chatHistory: ChatMessage[];
-    focusedImageId: string | null; // For the editor
+    focusedImageId: string | null; 
+    runwayAssets: RunwayAsset[]; // New gallery
 }
 
 export type Action =
@@ -75,4 +88,5 @@ export type Action =
     | { type: 'UPDATE_CONCEPT_IMAGE'; payload: { conceptId: string; imageId: string; view: ViewType; url: string } }
     | { type: 'SELECT_CONCEPT'; payload: string }
     | { type: 'FINALIZE_CONCEPT'; payload: string }
-    | { type: 'SET_FOCUSED_IMAGE'; payload: string | null };
+    | { type: 'SET_FOCUSED_IMAGE'; payload: string | null }
+    | { type: 'ADD_RUNWAY_ASSET'; payload: RunwayAsset };

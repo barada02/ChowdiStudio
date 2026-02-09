@@ -227,8 +227,6 @@ ${assetManifest || "No assets uploaded."}
 
     /**
      * Edits an image based on a mask (drawing) and instruction.
-     * Implements "Visual Prompting": The user draws a mask, we send the image + mask as one image,
-     * and instruct the model to interpret the red area as the edit zone.
      */
     async editImage(canvasBase64: string, instruction: string): Promise<string> {
         if (!getApiKey()) return canvasBase64;
@@ -236,7 +234,6 @@ ${assetManifest || "No assets uploaded."}
         try {
             const base64Data = canvasBase64.split(',')[1];
             
-            // Visual Prompting Strategy
             const visualPrompt = `
                 I have provided an image with RED SEMI-TRANSPARENT STROKES drawn over it.
                 These red strokes represent a MASK.
@@ -268,6 +265,95 @@ ${assetManifest || "No assets uploaded."}
         } catch (error) {
             console.error("Edit Error:", error);
             return canvasBase64;
+        }
+    }
+
+    /**
+     * Generates a video using Veo (gemini-video model).
+     */
+    async generateRunwayVideo(imageBase64: string, scenarioPrompt: string): Promise<string> {
+        if (!getApiKey()) throw new Error("API Key missing");
+        
+        try {
+            const base64Data = imageBase64.split(',')[1];
+            const mimeType = imageBase64.split(';')[0].split(':')[1];
+
+            // Use Veo model for video generation
+            // Note: In a real paid environment, we use 'veo-3.1-fast-generate-preview' or 'veo-3.1-generate-preview'
+            // We follow the protocol: generateVideos -> poll operation -> fetch result
+            
+            console.log("Starting Video Generation...");
+            
+            let operation = await this.ai.models.generateVideos({
+                model: 'veo-3.1-fast-generate-preview',
+                prompt: `Cinematic fashion video. A fashion model wearing this exact dress design walking in a ${scenarioPrompt}. High fashion, detailed texture, 4k, slow motion walk.`,
+                image: {
+                    imageBytes: base64Data,
+                    mimeType: mimeType || 'image/png',
+                },
+                config: {
+                    numberOfVideos: 1,
+                    resolution: '720p',
+                    aspectRatio: '9:16' // Portrait for mobile/Instagram style
+                }
+            });
+
+            console.log("Video Operation started:", operation);
+
+            // Poll for completion
+            while (!operation.done) {
+                await new Promise(resolve => setTimeout(resolve, 5000)); // Poll every 5s
+                operation = await this.ai.operations.getVideosOperation({operation: operation});
+                console.log("Polling video status...");
+            }
+
+            const downloadLink = operation.response?.generatedVideos?.[0]?.video?.uri;
+            if (!downloadLink) throw new Error("No video URI returned");
+
+            // Fetch the actual bytes (appending key is required for Veo links)
+            const videoResponse = await fetch(`${downloadLink}&key=${getApiKey()}`);
+            const videoBlob = await videoResponse.blob();
+            
+            return URL.createObjectURL(videoBlob);
+
+        } catch (error) {
+            console.error("Runway Video Gen Error:", error);
+            throw error; // Propagate to UI
+        }
+    }
+
+    /**
+     * Generates a high-quality photoshoot image using Imagen or Gemini Pro Image.
+     */
+    async generateRunwayPhoto(imageBase64: string, scenarioPrompt: string): Promise<string> {
+        if (!getApiKey()) return imageBase64;
+
+        try {
+            const base64Data = imageBase64.split(',')[1];
+            
+            // Image-to-Image generation for context placement
+            const prompt = `Professional fashion photography, full body shot. A model wearing this outfit in a ${scenarioPrompt}. Photorealistic, 8k, vogue magazine style, dramatic lighting.`;
+
+            const response = await this.ai.models.generateContent({
+                model: 'gemini-3-pro-image-preview', // Using Pro for highest fidelity
+                contents: {
+                    parts: [
+                        { inlineData: { mimeType: 'image/png', data: base64Data } },
+                        { text: prompt }
+                    ]
+                }
+            });
+
+            for (const part of response.candidates[0].content.parts) {
+                if (part.inlineData) {
+                    return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+                }
+            }
+            throw new Error("No photo generated");
+
+        } catch (error) {
+            console.error("Runway Photo Error:", error);
+            throw error;
         }
     }
 }

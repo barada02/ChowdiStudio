@@ -16,6 +16,7 @@ const initialState: AppState = {
         timestamp: Date.now()
     }],
     focusedImageId: null,
+    runwayAssets: [],
 };
 
 const reducer = (state: AppState, action: Action): AppState => {
@@ -69,6 +70,8 @@ const reducer = (state: AppState, action: Action): AppState => {
             return { ...state, currentTab: AppTab.BLUEPRINT };
         case 'SET_FOCUSED_IMAGE':
             return { ...state, focusedImageId: action.payload };
+        case 'ADD_RUNWAY_ASSET':
+            return { ...state, runwayAssets: [action.payload, ...state.runwayAssets] };
         default:
             return state;
     }

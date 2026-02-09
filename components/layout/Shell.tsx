@@ -7,6 +7,7 @@ import { GenerationBoard } from '../studio/GenerationBoard';
 import { AgentConsole } from '../studio/AgentConsole';
 import { BlueprintLab } from '../blueprint/BlueprintLab';
 import { FocusEditor } from '../studio/FocusEditor';
+import { RunwayStage } from '../runway/RunwayStage';
 
 // --- Header Component ---
 const Header: React.FC = () => {
@@ -105,6 +106,13 @@ export const Shell: React.FC = () => {
                     >
                         <Icons.Blueprint size={24} />
                     </button>
+                    <button 
+                        onClick={() => dispatch({ type: 'SET_TAB', payload: AppTab.RUNWAY })}
+                        className={`p-2 rounded transition ${state.currentTab === AppTab.RUNWAY ? 'text-ide-accent border-l-2 border-ide-accent bg-ide-bg' : 'text-ide-muted hover:text-ide-text'}`}
+                        title="Runway"
+                    >
+                        <Icons.Runway size={24} />
+                    </button>
                 </div>
 
                 {state.currentTab === AppTab.STUDIO ? (
@@ -140,9 +148,13 @@ export const Shell: React.FC = () => {
                             <AgentConsole />
                         </div>
                     </>
-                ) : (
+                ) : state.currentTab === AppTab.BLUEPRINT ? (
                     <div className="flex-1 bg-ide-bg">
                         <BlueprintLab />
+                    </div>
+                ) : (
+                    <div className="flex-1 bg-ide-bg">
+                        <RunwayStage />
                     </div>
                 )}
             </div>
