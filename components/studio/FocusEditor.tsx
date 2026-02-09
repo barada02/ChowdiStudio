@@ -7,10 +7,16 @@ import { ViewType, AgentStatus } from '../../types';
 export const FocusEditor: React.FC = () => {
     const { state, dispatch } = useStudio();
     const [prompt, setPrompt] = useState('');
-    const [tool, setTool] = useState<'brush' | 'eraser'>('brush');
+    const [tool, setTool] = useState<'brush' | 'eraser' | 'pan'>('brush');
     const [brushSize, setBrushSize] = useState(30);
     const [isDrawing, setIsDrawing] = useState(false);
     
+    // Zoom & Pan State
+    const [zoom, setZoom] = useState(1);
+    const [pan, setPan] = useState({ x: 0, y: 0 });
+    const [isPanning, setIsPanning] = useState(false);
+    const [lastMousePos, setLastMousePos] = useState({ x: 0, y: 0 });
+
     // Refs
     const maskCanvasRef = useRef<HTMLCanvasElement>(null);
     const imageRef = useRef<HTMLImageElement>(null);
@@ -18,7 +24,7 @@ export const FocusEditor: React.FC = () => {
 
     // Find the currently focused image
     const focusedImage = state.generatedConcepts
-        .flatMap(c => [c.images.hero, c.images.technical])
+        .flatMap(c => [c.images.hero, c.images.illustration, c.images.technical])
         .find(img => img?.id === state.focusedImageId);
 
     const activeConcept = state.generatedConcepts.find(c => c.id === focusedImage?.conceptId);
@@ -27,7 +33,6 @@ export const FocusEditor: React.FC = () => {
     useEffect(() => {
         if (!focusedImage) return;
 
-        // When the image loads, we sync the mask canvas size to it
         const img = imageRef.current;
         const canvas = maskCanvasRef.current;
         
@@ -37,21 +42,56 @@ export const FocusEditor: React.FC = () => {
                 canvas.height = img.naturalHeight;
             };
             
-            // If already loaded
             if (img.complete) {
                 handleLoad();
             } else {
                 img.onload = handleLoad;
             }
         }
+        
+        // Reset zoom/pan on new image
+        setZoom(1);
+        setPan({ x: 0, y: 0 });
     }, [focusedImage]);
 
-    // Drawing Logic
+    // --- Panning Logic ---
+    const startPan = (e: React.MouseEvent) => {
+        setIsPanning(true);
+        setLastMousePos({ x: e.clientX, y: e.clientY });
+    };
+
+    const doPan = (e: React.MouseEvent) => {
+        if (!isPanning) return;
+        const deltaX = e.clientX - lastMousePos.x;
+        const deltaY = e.clientY - lastMousePos.y;
+        
+        setPan(prev => ({ x: prev.x + deltaX, y: prev.y + deltaY }));
+        setLastMousePos({ x: e.clientX, y: e.clientY });
+    };
+
+    const stopPan = () => {
+        setIsPanning(false);
+    };
+
+    // --- Zoom Logic ---
+    const handleWheel = (e: React.WheelEvent) => {
+        // Only zoom if ctrl key is pressed OR if using a specific tool, otherwise standard scroll might be expected.
+        // But since we use overflow-hidden, we can hijack scroll for zoom or pan.
+        // Let's hijack for Zoom if no modifier, mirroring standard CAD tools.
+        const scaleAmount = -e.deltaY * 0.001;
+        const newZoom = Math.min(Math.max(0.1, zoom + scaleAmount), 5);
+        setZoom(newZoom);
+    };
+
+
+    // --- Drawing Logic ---
     const getPoint = (e: React.MouseEvent) => {
         const canvas = maskCanvasRef.current;
         if (!canvas) return { x: 0, y: 0 };
 
         const rect = canvas.getBoundingClientRect();
+        // The rect accounts for the CSS transform (zoom/pan)
+        // We calculate the scale between the rendered rect and the internal canvas resolution
         const scaleX = canvas.width / rect.width;
         const scaleY = canvas.height / rect.height;
 
@@ -62,6 +102,11 @@ export const FocusEditor: React.FC = () => {
     };
 
     const startDraw = (e: React.MouseEvent) => {
+        if (tool === 'pan') {
+            startPan(e);
+            return;
+        }
+
         setIsDrawing(true);
         const ctx = maskCanvasRef.current?.getContext('2d');
         if (!ctx) return;
@@ -73,13 +118,16 @@ export const FocusEditor: React.FC = () => {
         
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
-        ctx.lineWidth = brushSize * (maskCanvasRef.current!.width / maskCanvasRef.current!.getBoundingClientRect().width); // Scale brush size relative to view? Actually brushSize is pixels on canvas.
-
-        // Re-calculate brush size to be relative to the image resolution, 
-        // otherwise a 30px brush on a 4K image is tiny.
-        // Let's assume brushSize from UI is "Screen Pixels".
-        // We need to map screen pixels to canvas pixels.
-        const scale = maskCanvasRef.current!.width / maskCanvasRef.current!.getBoundingClientRect().width;
+        
+        // Brush size logic:
+        // brushSize is roughly "screen pixels".
+        // rect.width is rendered width in screen pixels.
+        // canvas.width is actual width.
+        // ratio = canvas.width / rect.width.
+        // actualLineWidth = brushSize * ratio.
+        const rect = maskCanvasRef.current!.getBoundingClientRect();
+        const scale = maskCanvasRef.current!.width / rect.width;
+        
         ctx.lineWidth = brushSize * scale;
 
         if (tool === 'eraser') {
@@ -91,6 +139,11 @@ export const FocusEditor: React.FC = () => {
     };
 
     const draw = (e: React.MouseEvent) => {
+        if (tool === 'pan') {
+            doPan(e);
+            return;
+        }
+
         if (!isDrawing) return;
         const ctx = maskCanvasRef.current?.getContext('2d');
         if (!ctx) return;
@@ -101,6 +154,10 @@ export const FocusEditor: React.FC = () => {
     };
 
     const stopDraw = () => {
+        if (tool === 'pan') {
+            stopPan();
+            return;
+        }
         setIsDrawing(false);
         const ctx = maskCanvasRef.current?.getContext('2d');
         ctx?.closePath();
@@ -176,10 +233,10 @@ export const FocusEditor: React.FC = () => {
         <div className="absolute inset-0 bg-black/95 z-50 flex items-center justify-center p-6 backdrop-blur-md animate-in fade-in duration-200">
             <div className="bg-ide-panel border border-ide-border rounded-lg shadow-2xl flex flex-col h-[90vh] w-full max-w-6xl overflow-hidden">
                 {/* Header */}
-                <div className="p-4 border-b border-ide-border flex justify-between items-center bg-ide-bg">
+                <div className="p-4 border-b border-ide-border flex justify-between items-center bg-ide-bg z-10">
                     <div>
                         <h3 className="text-ide-text font-medium flex items-center gap-2">
-                            <Icons.Edit size={16} className="text-ide-accent" /> Focus Editor: {activeConcept?.name}
+                            <Icons.Edit size={16} className="text-ide-accent" /> Editor: {activeConcept?.name}
                         </h3>
                     </div>
                     <button 
@@ -192,57 +249,99 @@ export const FocusEditor: React.FC = () => {
 
                 <div className="flex-1 flex overflow-hidden">
                     {/* Canvas Area */}
-                    <div className="flex-1 bg-[#1a1a1a] p-8 flex items-center justify-center overflow-hidden relative bg-dot-pattern select-none">
-                        
-                        {/* Container for Image + Canvas Stacking */}
+                    <div 
+                        className="flex-1 bg-[#1a1a1a] overflow-hidden relative bg-dot-pattern select-none"
+                        onWheel={handleWheel}
+                    >
+                        {/* Transform Container */}
                         <div 
-                            ref={containerRef}
-                            className="relative shadow-2xl border border-white/10 inline-block max-w-full max-h-full"
+                            style={{ 
+                                transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+                                transformOrigin: 'center center',
+                                transition: isPanning ? 'none' : 'transform 0.1s ease-out'
+                            }}
+                            className="w-full h-full flex items-center justify-center"
                         >
-                            {/* 1. Base Image (Read Only) */}
-                            <img 
-                                ref={imageRef}
-                                src={focusedImage.url} 
-                                alt="Editing Target"
-                                className="block max-w-full max-h-[75vh] w-auto h-auto object-contain pointer-events-none select-none"
-                                crossOrigin="anonymous"
-                            />
+                            <div 
+                                ref={containerRef}
+                                className="relative shadow-2xl border border-white/10 inline-block"
+                            >
+                                {/* 1. Base Image (Read Only) */}
+                                <img 
+                                    ref={imageRef}
+                                    src={focusedImage.url} 
+                                    alt="Editing Target"
+                                    className="block max-w-none w-auto h-auto pointer-events-none select-none"
+                                    style={{ maxHeight: 'none', maxWidth: 'none' }} // Allow scale to determine size
+                                    crossOrigin="anonymous"
+                                />
 
-                            {/* 2. Mask Canvas (Drawing Layer) */}
-                            <canvas 
-                                ref={maskCanvasRef}
-                                onMouseDown={startDraw}
-                                onMouseMove={draw}
-                                onMouseUp={stopDraw}
-                                onMouseLeave={stopDraw}
-                                className="absolute inset-0 w-full h-full cursor-crosshair touch-none"
-                            />
+                                {/* 2. Mask Canvas (Drawing Layer) */}
+                                <canvas 
+                                    ref={maskCanvasRef}
+                                    onMouseDown={startDraw}
+                                    onMouseMove={draw}
+                                    onMouseUp={stopDraw}
+                                    onMouseLeave={stopDraw}
+                                    className={`absolute inset-0 w-full h-full touch-none ${tool === 'pan' ? 'cursor-grab active:cursor-grabbing' : 'cursor-crosshair'}`}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Zoom Indicator */}
+                        <div className="absolute bottom-4 left-4 bg-black/60 backdrop-blur-sm text-white px-3 py-1 rounded-full text-xs font-mono border border-white/10 pointer-events-none">
+                            {Math.round(zoom * 100)}%
                         </div>
                     </div>
 
                     {/* Tools Panel */}
-                    <div className="w-80 bg-ide-panel border-l border-ide-border p-6 flex flex-col gap-6 overflow-y-auto">
+                    <div className="w-80 bg-ide-panel border-l border-ide-border p-6 flex flex-col gap-6 overflow-y-auto z-10 shadow-xl">
                          
                          {/* Tools Section */}
                          <div className="space-y-4">
-                            <label className="text-xs font-bold text-ide-muted uppercase block">Masking Tools</label>
+                            <label className="text-xs font-bold text-ide-muted uppercase block">Viewport & Masking</label>
                             
                             <div className="flex gap-2 bg-ide-bg p-1 rounded border border-ide-border">
                                 <button
+                                    onClick={() => setTool('pan')}
+                                    title="Pan (Move)"
+                                    className={`flex-1 py-2 rounded flex items-center justify-center gap-2 text-xs font-bold transition ${tool === 'pan' ? 'bg-ide-accent text-white shadow-sm' : 'text-ide-muted hover:text-ide-text hover:bg-ide-panel'}`}
+                                >
+                                    <Icons.Hand size={14} />
+                                </button>
+                                <button
                                     onClick={() => setTool('brush')}
+                                    title="Mask Brush"
                                     className={`flex-1 py-2 rounded flex items-center justify-center gap-2 text-xs font-bold transition ${tool === 'brush' ? 'bg-ide-accent text-white shadow-sm' : 'text-ide-muted hover:text-ide-text hover:bg-ide-panel'}`}
                                 >
-                                    <Icons.Brush size={14} /> Brush
+                                    <Icons.Brush size={14} />
                                 </button>
                                 <button
                                     onClick={() => setTool('eraser')}
+                                    title="Eraser"
                                     className={`flex-1 py-2 rounded flex items-center justify-center gap-2 text-xs font-bold transition ${tool === 'eraser' ? 'bg-ide-panel text-ide-text shadow-sm border border-ide-border' : 'text-ide-muted hover:text-ide-text hover:bg-ide-panel'}`}
                                 >
-                                    <Icons.Eraser size={14} /> Eraser
+                                    <Icons.Eraser size={14} />
                                 </button>
                             </div>
 
-                            <div className="space-y-2">
+                            <div className="space-y-2 pt-2">
+                                <div className="flex justify-between text-xs text-ide-muted">
+                                    <span>Zoom Level</span>
+                                    <span>{Math.round(zoom * 100)}%</span>
+                                </div>
+                                <input 
+                                    type="range" 
+                                    min="0.1" 
+                                    max="3" 
+                                    step="0.1"
+                                    value={zoom}
+                                    onChange={(e) => setZoom(parseFloat(e.target.value))}
+                                    className="w-full accent-ide-accent h-1.5 bg-ide-border rounded-lg appearance-none cursor-pointer"
+                                />
+                            </div>
+
+                             <div className="space-y-2 pt-2">
                                 <div className="flex justify-between text-xs text-ide-muted">
                                     <span>Brush Size</span>
                                     <span>{brushSize}px</span>
@@ -255,12 +354,6 @@ export const FocusEditor: React.FC = () => {
                                     onChange={(e) => setBrushSize(parseInt(e.target.value))}
                                     className="w-full accent-ide-accent h-1.5 bg-ide-border rounded-lg appearance-none cursor-pointer"
                                 />
-                                <div className="flex justify-center pt-2 h-8">
-                                    <div 
-                                        className="rounded-full bg-red-500/50" 
-                                        style={{ width: brushSize / 2, height: brushSize / 2 }} // Preview scaled down visually
-                                    ></div>
-                                </div>
                             </div>
                          </div>
 
@@ -279,7 +372,7 @@ export const FocusEditor: React.FC = () => {
                          
                          <div className="bg-ide-bg p-3 rounded text-[10px] text-ide-muted border border-ide-border">
                              <strong className="block mb-1 text-ide-text">Pro Tip:</strong>
-                             Only the highlighted area will be modified. The rest of the image will remain identical.
+                             Use the Hand tool to move around large images. Highlighting is precise at high zoom levels.
                          </div>
 
                          <button 

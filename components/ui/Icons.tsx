@@ -27,7 +27,8 @@ import {
     PanelRightOpen,
     Eraser,
     Brush,
-    Maximize2
+    Maximize2,
+    Hand
 } from 'lucide-react';
 
 export const Icons = {
@@ -62,5 +63,6 @@ export const Icons = {
     PanelOpen: PanelRightOpen,
     Eraser: Eraser,
     Brush: Brush,
-    Maximize: Maximize2
+    Maximize: Maximize2,
+    Hand: Hand
 };

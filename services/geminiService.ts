@@ -206,8 +206,17 @@ ${assetManifest || "No assets uploaded."}
         if (!getApiKey()) return "https://picsum.photos/800/1200";
 
         try {
-            // Emphasis on Realism and Full Body
-            const finalPrompt = `High fashion photography, full body shot of a model wearing: ${prompt}. Professional studio lighting, 8k resolution, detailed texture, vogue editorial style.`;
+            // Updated Prompt: Strict Single Subject Enforcement
+            const finalPrompt = `
+                High fashion photography, full body shot of a SINGLE model wearing: ${prompt}.
+                Professional studio lighting, 8k resolution, detailed texture, vogue editorial style.
+                
+                NEGATIVE PROMPT / CONSTRAINTS:
+                - Single person only. Do NOT generate multiple figures.
+                - Do NOT use split screen, collage, or grid layout.
+                - No zoomed-in insets or detail shots in the main image.
+                - No text overlays.
+            `;
 
             const response = await this.ai.models.generateContent({
                 model: MODELS.IMAGE_GEN,

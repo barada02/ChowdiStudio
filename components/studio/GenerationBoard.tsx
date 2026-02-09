@@ -134,16 +134,20 @@ export const GenerationBoard: React.FC = () => {
                             )}
                         </div>
 
-                         {/* 2. Illustration View (Artistic Mood) - Read Only */}
-                        <div className={`relative group h-[70vh] aspect-[3/4] bg-white rounded-lg shadow-xl border border-ide-border overflow-hidden rotate-1 transform hover:rotate-0 transition-all duration-300 ${isSidebarOpen ? '' : 'h-[80vh]'}`}>
-                             <div className="absolute top-0 left-0 right-0 p-3 bg-white/90 border-b border-gray-100 z-10 flex justify-between items-start">
-                                <span className="text-black text-xs font-bold uppercase tracking-widest flex items-center gap-2">
+                         {/* 2. Illustration View (Artistic Mood) - View Only */}
+                        <div 
+                            className={`relative group h-[70vh] aspect-[3/4] bg-[#fdfaf5] rounded-lg shadow-xl border border-ide-border overflow-hidden rotate-1 transform hover:rotate-0 transition-all duration-300 cursor-zoom-in ${isSidebarOpen ? '' : 'h-[80vh]'}`}
+                            onClick={() => activeConcept.images.illustration && handleFocus(activeConcept.images.illustration.id)}
+                        >
+                             <div className="absolute top-0 left-0 right-0 p-3 bg-white/50 backdrop-blur-sm border-b border-gray-100/50 z-10 flex justify-between items-start pointer-events-none">
+                                <span className="text-black/70 text-xs font-bold uppercase tracking-widest flex items-center gap-2">
                                     <Icons.PenTool size={14}/> Mood Sketch
                                 </span>
                             </div>
                             {activeConcept.images.illustration ? (
                                 <>
-                                    <img src={activeConcept.images.illustration.url} className="w-full h-full object-cover" alt="Fashion Illustration" />
+                                    {/* changed object-cover to object-contain so full sketch is visible */}
+                                    <img src={activeConcept.images.illustration.url} className="w-full h-full object-contain p-4" alt="Fashion Illustration" />
                                      {/* Download Button */}
                                      <button 
                                         onClick={(e) => downloadImage(e, activeConcept.images.illustration!.url, `${activeConcept.name}-Sketch.png`)}
@@ -152,6 +156,13 @@ export const GenerationBoard: React.FC = () => {
                                     >
                                         <Icons.Download size={16} />
                                     </button>
+                                     {/* Hover hint overlay */}
+                                     <div className="absolute inset-0 flex items-center justify-center bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                                        <div className="bg-white/80 text-black px-3 py-1.5 rounded-full flex items-center gap-2 backdrop-blur-md border border-black/10 shadow-sm">
+                                            <Icons.Zoom size={14} />
+                                            <span className="text-xs font-bold">Inspect</span>
+                                        </div>
+                                    </div>
                                 </>
                             ) : (
                                 <div className="w-full h-full flex items-center justify-center bg-gray-50">
