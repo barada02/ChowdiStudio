@@ -46,12 +46,17 @@ const reducer = (state: AppState, action: Action): AppState => {
                 ...state,
                 generatedConcepts: state.generatedConcepts.map(c => {
                     if (c.id === action.payload.conceptId) {
+                        const targetKey = action.payload.view === ViewType.FRONT ? 'front' : 'back';
+                        
+                        // Construct a proper DesignImage object
                         return {
                             ...c,
                             images: {
                                 ...c.images,
-                                [action.payload.view === ViewType.FRONT ? 'front' : 'back']: {
-                                    ...c.images[action.payload.view === ViewType.FRONT ? 'front' : 'back'],
+                                [targetKey]: {
+                                    id: action.payload.imageId, // Explicit ID from payload
+                                    conceptId: c.id,
+                                    view: action.payload.view,
                                     url: action.payload.url
                                 }
                             }

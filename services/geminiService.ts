@@ -227,18 +227,33 @@ ${assetManifest || "No assets uploaded."}
 
     /**
      * Edits an image based on a mask (drawing) and instruction.
+     * Implements "Visual Prompting": The user draws a mask, we send the image + mask as one image,
+     * and instruct the model to interpret the red area as the edit zone.
      */
-    async editImage(originalBase64: string, instruction: string): Promise<string> {
-        if (!getApiKey()) return originalBase64;
+    async editImage(canvasBase64: string, instruction: string): Promise<string> {
+        if (!getApiKey()) return canvasBase64;
 
         try {
-            const base64Data = originalBase64.split(',')[1];
+            const base64Data = canvasBase64.split(',')[1];
+            
+            // Visual Prompting Strategy
+            const visualPrompt = `
+                I have provided an image with RED SEMI-TRANSPARENT STROKES drawn over it.
+                These red strokes represent a MASK.
+                
+                TASK:
+                1. Identify the area covered by the RED strokes.
+                2. Apply the following change ONLY to that area: "${instruction}".
+                3. Keep the rest of the image exactly the same.
+                4. The final output must NOT have the red strokes. It should look like a finished, clean fashion design.
+            `;
+
             const response = await this.ai.models.generateContent({
                 model: MODELS.IMAGE_EDIT, 
                 contents: {
                     parts: [
                         { inlineData: { mimeType: 'image/png', data: base64Data } },
-                        { text: `Edit this fashion design: ${instruction}. Keep the rest of the design exactly the same.` }
+                        { text: visualPrompt }
                     ]
                 }
             });
@@ -248,11 +263,11 @@ ${assetManifest || "No assets uploaded."}
                     return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
                 }
             }
-            return originalBase64;
+            return canvasBase64;
 
         } catch (error) {
             console.error("Edit Error:", error);
-            return originalBase64;
+            return canvasBase64;
         }
     }
 }

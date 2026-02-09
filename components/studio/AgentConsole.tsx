@@ -82,6 +82,12 @@ export const AgentConsole: React.FC = () => {
 
         dispatch({ type: 'SET_CONCEPTS', payload: newConcepts });
 
+        // Generate Pre-computed IDs for the images
+        const c1FrontId = `img-${concept1Id}-f`;
+        const c1BackId = `img-${concept1Id}-b`;
+        const c2FrontId = `img-${concept2Id}-f`;
+        const c2BackId = `img-${concept2Id}-b`;
+
         const c1FrontProm = geminiService.generateImage(args.concept1_description, 'Front View');
         const c1BackProm = geminiService.generateImage(args.concept1_description, 'Back View');
         const c2FrontProm = geminiService.generateImage(args.concept2_description, 'Front View');
@@ -89,10 +95,10 @@ export const AgentConsole: React.FC = () => {
 
         const [c1f, c1b, c2f, c2b] = await Promise.all([c1FrontProm, c1BackProm, c2FrontProm, c2BackProm]);
 
-        dispatch({ type: 'UPDATE_CONCEPT_IMAGE', payload: { conceptId: concept1Id, view: ViewType.FRONT, url: c1f } });
-        dispatch({ type: 'UPDATE_CONCEPT_IMAGE', payload: { conceptId: concept1Id, view: ViewType.BACK, url: c1b } });
-        dispatch({ type: 'UPDATE_CONCEPT_IMAGE', payload: { conceptId: concept2Id, view: ViewType.FRONT, url: c2f } });
-        dispatch({ type: 'UPDATE_CONCEPT_IMAGE', payload: { conceptId: concept2Id, view: ViewType.BACK, url: c2b } });
+        dispatch({ type: 'UPDATE_CONCEPT_IMAGE', payload: { conceptId: concept1Id, imageId: c1FrontId, view: ViewType.FRONT, url: c1f } });
+        dispatch({ type: 'UPDATE_CONCEPT_IMAGE', payload: { conceptId: concept1Id, imageId: c1BackId, view: ViewType.BACK, url: c1b } });
+        dispatch({ type: 'UPDATE_CONCEPT_IMAGE', payload: { conceptId: concept2Id, imageId: c2FrontId, view: ViewType.FRONT, url: c2f } });
+        dispatch({ type: 'UPDATE_CONCEPT_IMAGE', payload: { conceptId: concept2Id, imageId: c2BackId, view: ViewType.BACK, url: c2b } });
 
         dispatch({ type: 'SET_AGENT_STATUS', payload: AgentStatus.IDLE });
     };

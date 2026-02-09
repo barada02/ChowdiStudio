@@ -68,11 +68,11 @@ export type Action =
     | { type: 'TOGGLE_THEME' }
     | { type: 'SET_TAB'; payload: AppTab }
     | { type: 'ADD_INSPIRATION'; payload: InspirationAsset }
-    | { type: 'TOGGLE_ASSET_SELECTION'; payload: string } // NEW
+    | { type: 'TOGGLE_ASSET_SELECTION'; payload: string } 
     | { type: 'SET_AGENT_STATUS'; payload: AgentStatus }
     | { type: 'ADD_MESSAGE'; payload: ChatMessage }
     | { type: 'SET_CONCEPTS'; payload: DesignConcept[] }
-    | { type: 'UPDATE_CONCEPT_IMAGE'; payload: { conceptId: string; view: ViewType; url: string } }
+    | { type: 'UPDATE_CONCEPT_IMAGE'; payload: { conceptId: string; imageId: string; view: ViewType; url: string } }
     | { type: 'SELECT_CONCEPT'; payload: string }
     | { type: 'FINALIZE_CONCEPT'; payload: string }
     | { type: 'SET_FOCUSED_IMAGE'; payload: string | null };
