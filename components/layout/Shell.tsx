@@ -13,12 +13,18 @@ import { RunwayStage } from '../runway/RunwayStage';
 const Header: React.FC = () => {
     const { state, dispatch } = useStudio();
     return (
-        <header className="h-10 flex items-center justify-between px-4 bg-ide-panel border-b border-ide-border flex-shrink-0">
-            <div className="flex items-center gap-2">
+        <header className="relative h-10 flex items-center justify-between px-4 bg-ide-panel border-b border-ide-border flex-shrink-0">
+            {/* Left Spacer */}
+            <div className="flex-1"></div>
+
+            {/* Centered App Title */}
+            <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 flex items-center gap-2 pointer-events-none select-none">
                 <Icons.Scissors size={18} className="text-ide-accent" />
                 <span className="font-semibold text-sm tracking-wide">ChowdiStudio</span>
             </div>
-            <div className="flex items-center gap-4">
+
+            {/* Right Controls */}
+            <div className="flex items-center gap-4 z-10">
                 <span className="text-xs text-ide-muted bg-ide-bg px-2 py-1 rounded border border-ide-border">
                    {process.env.API_KEY ? 'CONNECTED' : 'DEMO MODE'}
                 </span>

@@ -118,7 +118,7 @@ export const AgentConsole: React.FC = () => {
         <div className="h-full flex flex-col bg-ide-panel">
             <div className="h-10 px-3 border-b border-ide-border flex justify-between items-center bg-ide-panel flex-shrink-0">
                 <h2 className="text-xs font-bold text-ide-muted uppercase tracking-wider flex items-center gap-2">
-                    <Icons.Chat size={14} /> Master Agent
+                    <Icons.Chat size={14} /> Atelier Agent
                 </h2>
                 <div className={`w-2 h-2 rounded-full ${state.agentStatus === AgentStatus.IDLE ? 'bg-green-500' : 'bg-yellow-500 animate-pulse'}`}></div>
             </div>

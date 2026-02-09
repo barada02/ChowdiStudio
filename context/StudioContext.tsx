@@ -12,7 +12,7 @@ const initialState: AppState = {
     chatHistory: [{
         id: 'init',
         role: 'system',
-        content: 'Welcome to ChowdiStudio. I am your Master Agent. Select assets to share them with me, or simply start chatting.',
+        content: 'Welcome to ChowdiStudio. I am your Atelier Agent. Select assets to share them with me, or simply start chatting.',
         timestamp: Date.now()
     }],
     focusedImageId: null,
